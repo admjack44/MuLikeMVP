@@ -1,8 +1,5 @@
 using System;
-using System.Net;
 using System.Threading.Tasks;
-using MuLike.Server.Infrastructure;
-using MuLike.Shared.Protocol;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -32,34 +29,43 @@ namespace MuLike.Networking
         [SerializeField] private KeyCode _moveKey = KeyCode.F2;
         [SerializeField] private KeyCode _skillKey = KeyCode.F3;
 
+        private IGameConnection _connection;
         private PacketRouter _packetRouter;
-        private NetworkClient _networkClient;
-
-        private ServerApplication _serverApp;
-        private InMemoryGatewayBridge _bridge;
-        private Guid _sessionId;
+        private NetworkEventStream _eventStream;
+        private AuthClientService _authService;
+        private MovementClientService _movementService;
+        private SkillClientService _skillService;
 
         private bool _connected;
-        private bool _authenticated;
-        private string _accessToken;
 
         public bool IsConnected => _connected;
-        public bool IsAuthenticated => _authenticated;
+        public bool IsAuthenticated => _authService != null && _authService.IsAuthenticated;
         public event Action<string> OnClientLog;
+        public event Action<bool, string> OnLoginResult;
+        public event Action<bool, Vector3, string> OnMoveResult;
+        public event Action<bool, int, int, string> OnSkillResult;
 
         private async void Start()
         {
-            _packetRouter = new PacketRouter();
-            RegisterPacketHandlers();
+            BuildNetworkStack();
+            WireNetworkStack();
 
-            if (_useInMemoryGateway)
-            {
-                await StartInMemoryAsync();
-            }
-            else
-            {
-                await ConnectTcpAsync();
-            }
+            Log($"Connecting using {(_useInMemoryGateway ? "InMemory" : "TCP")} transport...");
+            await _connection.ConnectAsync();
+        }
+
+        private void BuildNetworkStack()
+        {
+            _connection = _useInMemoryGateway
+                ? new InMemoryGameConnection()
+                : new TcpGameConnection(_host, _port);
+
+            _packetRouter = new PacketRouter();
+            _eventStream = new NetworkEventStream(_packetRouter);
+            _authService = new AuthClientService(_connection, _eventStream);
+            _movementService = new MovementClientService(_connection, _eventStream);
+            _skillService = new SkillClientService(_connection, _eventStream);
+            _authService.ConfigureCredentials(_username, _password);
         }
 
         private void Update()
@@ -71,17 +77,30 @@ namespace MuLike.Networking
                 _ = SendLoginAsync();
             }
 
-            if (_authenticated && WasKeyPressed(_moveKey))
+            if (IsAuthenticated && WasKeyPressed(_moveKey))
             {
                 Vector3 target = transform.position + new Vector3(UnityEngine.Random.Range(-3f, 3f), 0f, UnityEngine.Random.Range(-3f, 3f));
                 _ = SendMoveAsync(target.x, target.y, target.z);
             }
 
-            if (_authenticated && WasKeyPressed(_skillKey))
+            if (IsAuthenticated && WasKeyPressed(_skillKey))
             {
                 // Demo target entity id. In a real flow this comes from TargetingController.
                 _ = SendSkillCastAsync(skillId: 1, targetId: 999);
             }
+        }
+
+        private void WireNetworkStack()
+        {
+            _connection.Connected += HandleConnected;
+            _connection.Disconnected += HandleDisconnected;
+            _connection.PacketReceived += HandleIncomingPacket;
+
+            _eventStream.ErrorReceived += HandleServerError;
+            _eventStream.LoginResponseReceived += HandleLoginResponse;
+            _movementService.MoveResultReceived += HandleMoveResult;
+            _skillService.SkillResultReceived += HandleSkillResult;
+            _authService.LoginResultReceived += HandleLoginResult;
         }
 
         private static bool WasKeyPressed(KeyCode keyCode)
@@ -115,134 +134,80 @@ namespace MuLike.Networking
 
         public async Task SendLoginAsync()
         {
-            byte[] packet = ClientMessageFactory.CreateLoginRequest(_username, _password);
-            await SendPacketAsync(packet);
+            await _authService.LoginAsync();
+        }
+
+        public void ConfigureCredentials(string username, string password)
+        {
+            _username = username ?? string.Empty;
+            _password = password ?? string.Empty;
+            _authService?.ConfigureCredentials(_username, _password);
+            Log($"Credentials updated for user '{_username}'.");
         }
 
         public async Task SendMoveAsync(float x, float y, float z)
         {
-            byte[] packet = ClientMessageFactory.CreateMoveRequest(x, y, z);
-            await SendPacketAsync(packet);
+            await _movementService.MoveAsync(x, y, z);
         }
 
         public async Task SendSkillCastAsync(int skillId, int targetId)
         {
-            byte[] packet = ClientMessageFactory.CreateSkillCastRequest(skillId, targetId);
-            await SendPacketAsync(packet);
-        }
-
-        private async Task StartInMemoryAsync()
-        {
-            var startup = await ServerBootstrap.StartDefaultAsync();
-            _serverApp = startup.app;
-            _bridge = startup.bridge;
-            _sessionId = startup.sessionId;
-            _connected = true;
-
-            Log("Connected via InMemoryGatewayBridge.");
-        }
-
-        private async Task ConnectTcpAsync()
-        {
-            _networkClient = new NetworkClient();
-            _networkClient.OnPacketReceived += HandleIncomingPacket;
-            _networkClient.OnConnected += () =>
-            {
-                _connected = true;
-                Log("Connected via TCP.");
-            };
-            _networkClient.OnDisconnected += () =>
-            {
-                _connected = false;
-                _authenticated = false;
-                Log("Disconnected.");
-            };
-
-            await _networkClient.ConnectAsync(_host, _port);
-
-            // Session identifier for remote servers can be set during login response in a future iteration.
-            _sessionId = Guid.NewGuid();
-        }
-
-        private async Task SendPacketAsync(byte[] packet)
-        {
-            if (!_connected || packet == null) return;
-
-            if (_useInMemoryGateway)
-            {
-                byte[] response = _bridge.Send(_sessionId, packet);
-                if (response != null)
-                {
-                    _packetRouter.Route(response);
-                }
-            }
-            else
-            {
-                await _networkClient.SendAsync(packet);
-            }
+            await _skillService.CastAsync(skillId, targetId);
         }
 
         private void HandleIncomingPacket(byte[] packet)
         {
-            _packetRouter.Route(packet);
+            _eventStream.ProcessPacket(packet);
         }
 
-        private void RegisterPacketHandlers()
+        private void HandleConnected()
         {
-            _packetRouter.Register(NetOpcodes.LoginResponse, payload =>
+            _connected = true;
+            Log($"Connected via {(_useInMemoryGateway ? "InMemoryGatewayBridge" : "TCP") }.");
+        }
+
+        private void HandleDisconnected()
+        {
+            _connected = false;
+            _authService?.Reset();
+            Log("Disconnected.");
+        }
+
+        private void HandleServerError(string message)
+        {
+            LogWarning($"Server error: {message}");
+        }
+
+        private void HandleLoginResponse(bool success, string token, string message)
+        {
+            Log($"Login response: success={success}, msg={message}");
+        }
+
+        private void HandleMoveResult(bool success, Vector3 position, string message)
+        {
+            if (success)
             {
-                if (!ServerMessageParser.TryParseLoginResponse(payload, out bool success, out string token, out string message))
-                {
-                    LogWarning("Invalid LoginResponse payload.");
-                    return;
-                }
+                transform.position = position;
+            }
 
-                _authenticated = success;
-                _accessToken = token;
-                Log($"Login response: success={success}, msg={message}");
-            });
+            Log($"Move response: success={success}, pos=({position.x:F2},{position.y:F2},{position.z:F2}), msg={message}");
+            OnMoveResult?.Invoke(success, position, message);
+        }
 
-            _packetRouter.Register(NetOpcodes.MoveResponse, payload =>
+        private void HandleSkillResult(bool success, int targetId, int damage, string message)
+        {
+            Log($"Skill response: success={success}, target={targetId}, damage={damage}, msg={message}");
+            OnSkillResult?.Invoke(success, targetId, damage, message);
+        }
+
+        private void HandleLoginResult(bool success, string message)
+        {
+            if (!success)
             {
-                if (!ServerMessageParser.TryParseMoveResponse(payload, out bool success, out float x, out float y, out float z, out string message))
-                {
-                    LogWarning("Invalid MoveResponse payload.");
-                    return;
-                }
+                LogWarning($"Login failed: {message}");
+            }
 
-                if (success)
-                {
-                    transform.position = new Vector3(x, y, z);
-                }
-
-                Log($"Move response: success={success}, pos=({x:F2},{y:F2},{z:F2}), msg={message}");
-            });
-
-            _packetRouter.Register(NetOpcodes.SkillCastResponse, payload =>
-            {
-                if (!ServerMessageParser.TryParseSkillCastResponse(payload, out bool success, out int targetId, out int damage, out string message))
-                {
-                    LogWarning("Invalid SkillCastResponse payload.");
-                    return;
-                }
-
-                Log($"Skill response: success={success}, target={targetId}, damage={damage}, msg={message}");
-            });
-
-            _packetRouter.Register(NetOpcodes.ErrorResponse, payload =>
-            {
-                try
-                {
-                    using var ms = new System.IO.MemoryStream(payload);
-                    using var reader = new System.IO.BinaryReader(ms);
-                    string message = PacketCodec.ReadString(reader);
-                    LogWarning($"Server error: {message}");
-                }
-                catch
-                {
-                    LogWarning("Malformed error payload.");
-                }
-            });
+            OnLoginResult?.Invoke(success, message);
         }
 
         private void Log(string message)
@@ -261,19 +226,8 @@ namespace MuLike.Networking
 
         private void OnDestroy()
         {
-            if (_networkClient != null && _networkClient.IsConnected)
-            {
-                _networkClient.Disconnect();
-            }
-
-            if (_serverApp != null)
-            {
-                _serverApp.Stop();
-            }
-
+            _connection?.Disconnect();
             _connected = false;
-            _authenticated = false;
-            _accessToken = null;
         }
     }
 }

@@ -31,11 +31,14 @@ namespace MuLike.Data.DTO
     {
         public int id;
         public string name;
+        public string category;
         public string type;
         public string subtype;
         public string family;
         public string rarity;
         public int level;
+        public bool twoHanded;
+        public string[] equipSlots;
 
         public int minDamage;
         public int maxDamage;

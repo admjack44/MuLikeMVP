@@ -12,6 +12,7 @@ namespace MuLike.Gameplay.Controllers
     public class TargetingController : MonoBehaviour
     {
         public EntityView CurrentTarget { get; private set; }
+        public event System.Action<EntityView> OnTargetChanged;
 
         [SerializeField] private LayerMask _targetableLayer;
         [SerializeField] private float _maxRange = 30f;
@@ -60,13 +61,29 @@ namespace MuLike.Gameplay.Controllers
 
         public void SetTarget(EntityView target)
         {
+            if (CurrentTarget == target)
+                return;
+
             CurrentTarget = target;
             Debug.Log($"[Targeting] Selected entity {target?.EntityId}");
+            OnTargetChanged?.Invoke(CurrentTarget);
         }
 
         public void ClearTarget()
         {
+            if (CurrentTarget == null)
+                return;
+
             CurrentTarget = null;
+            OnTargetChanged?.Invoke(null);
+        }
+
+        public bool IsTargetInRange(Vector3 fromPosition, float range)
+        {
+            if (CurrentTarget == null)
+                return false;
+
+            return Vector3.Distance(fromPosition, CurrentTarget.transform.position) <= range;
         }
     }
 }

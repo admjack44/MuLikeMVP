@@ -12,6 +12,7 @@ namespace MuLike.Gameplay.Controllers
     public class SkillCastController : MonoBehaviour
     {
         [SerializeField] private TargetingController _targeting;
+        [SerializeField] private MuLike.Gameplay.Combat.CombatController _combatController;
 
         private float[] _cooldowns = new float[0];
 
@@ -22,6 +23,11 @@ namespace MuLike.Gameplay.Controllers
 
         public bool TryCastSkill(int skillIndex, float range, float cooldown)
         {
+            if (_combatController != null)
+            {
+                return _combatController.TryCastSkillByIndex(skillIndex);
+            }
+
             if (skillIndex < 0 || skillIndex >= _cooldowns.Length) return false;
             if (_cooldowns[skillIndex] > 0f) return false;
             if (_targeting.CurrentTarget == null) return false;
