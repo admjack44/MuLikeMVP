@@ -1,0 +1,76 @@
+{
+  "group": "upgrade_materials",
+  "items": [
+    {
+      "id": 2401,
+      "name": "Blessing Jewel",
+      "type": "upgrade",
+      "subtype": "jewel",
+      "family": "jewels",
+      "rarity": "rare",
+      "level": 0,
+      "upgrade": {
+        "target": "equipment",
+        "effect": "upgrade_level"
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": true,
+      "maxStack": 10,
+      "sellPrice": 50000,
+      "model": "JWL_BLESS_01",
+      "icon": "icon_jewel_bless",
+      "fxProfile": "jewel_shine_gold"
+    },
+    {
+      "id": 2402,
+      "name": "Soul Jewel",
+      "type": "upgrade",
+      "subtype": "jewel",
+      "family": "jewels",
+      "rarity": "rare",
+      "level": 0,
+      "upgrade": {
+        "target": "equipment",
+        "effect": "upgrade_high_risk"
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": true,
+      "maxStack": 10,
+      "sellPrice": 52000,
+      "model": "JWL_SOUL_01",
+      "icon": "icon_jewel_soul",
+      "fxProfile": "jewel_shine_blue"
+    },
+    {
+      "id": 2501,
+      "name": "Refining Ore",
+      "type": "material",
+      "subtype": "craft_material",
+      "family": "materials",
+      "rarity": "common",
+      "level": 0,
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": true,
+      "maxStack": 50,
+      "sellPrice": 400,
+      "model": "MAT_REFINING_ORE_01",
+      "icon": "icon_material_ore",
+      "fxProfile": "none"
+    }
+  ]
+}

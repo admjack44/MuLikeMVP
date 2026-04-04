@@ -1,0 +1,47 @@
+{
+  "group": "event_quest",
+  "items": [
+    {
+      "id": 2601,
+      "name": "Festival Token",
+      "type": "event",
+      "subtype": "token",
+      "family": "event_items",
+      "rarity": "event",
+      "level": 0,
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": true,
+      "maxStack": 50,
+      "sellPrice": 0,
+      "model": "EVT_TOKEN_01",
+      "icon": "icon_event_token",
+      "fxProfile": "event_glow"
+    },
+    {
+      "id": 2701,
+      "name": "Royal Letter",
+      "type": "quest",
+      "subtype": "document",
+      "family": "quest_items",
+      "rarity": "quest",
+      "level": 0,
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 0,
+      "model": "QST_LETTER_01",
+      "icon": "icon_quest_letter",
+      "fxProfile": "none"
+    }
+  ]
+}

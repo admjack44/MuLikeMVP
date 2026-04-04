@@ -1,0 +1,137 @@
+{
+  "group": "specials",
+  "items": [
+    {
+      "id": 2101,
+      "name": "Feather Wing",
+      "type": "special",
+      "subtype": "wing",
+      "family": "wings",
+      "rarity": "excellent",
+      "level": 0,
+      "bonuses": {
+        "moveSpeed": 15,
+        "damageAbsorb": 5,
+        "damageBoost": 3
+      },
+      "requirements": {
+        "strength": 45,
+        "agility": 45,
+        "energy": 30,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 250000,
+      "model": "WING_FEATHER_01",
+      "icon": "icon_wing_feather",
+      "fxProfile": "wing_glow_white"
+    },
+    {
+      "id": 2102,
+      "name": "Demon Wing",
+      "type": "special",
+      "subtype": "wing",
+      "family": "wings",
+      "rarity": "excellent",
+      "level": 1,
+      "bonuses": {
+        "moveSpeed": 18,
+        "damageAbsorb": 7,
+        "damageBoost": 5
+      },
+      "requirements": {
+        "strength": 80,
+        "agility": 40,
+        "energy": 50,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 420000,
+      "model": "WING_DEMON_01",
+      "icon": "icon_wing_demon",
+      "fxProfile": "wing_glow_crimson"
+    },
+    {
+      "id": 2103,
+      "name": "Celestial Wing",
+      "type": "special",
+      "subtype": "wing",
+      "family": "wings",
+      "rarity": "set",
+      "level": 2,
+      "bonuses": {
+        "moveSpeed": 22,
+        "damageAbsorb": 9,
+        "damageBoost": 7,
+        "mana": 60
+      },
+      "requirements": {
+        "strength": 70,
+        "agility": 70,
+        "energy": 80,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 650000,
+      "model": "WING_CELESTIAL_01",
+      "icon": "icon_wing_celestial",
+      "fxProfile": "wing_glow_sky"
+    },
+    {
+      "id": 2104,
+      "name": "Monarch Wing",
+      "type": "special",
+      "subtype": "wing",
+      "family": "wings",
+      "rarity": "excellent",
+      "level": 3,
+      "bonuses": {
+        "moveSpeed": 25,
+        "damageAbsorb": 10,
+        "damageBoost": 10,
+        "command": 30
+      },
+      "requirements": {
+        "strength": 90,
+        "agility": 60,
+        "energy": 40,
+        "command": 50
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 780000,
+      "model": "WING_MONARCH_01",
+      "icon": "icon_wing_monarch",
+      "fxProfile": "wing_glow_gold"
+    },
+    {
+      "id": 2201,
+      "name": "Guardian Pet",
+      "type": "pet",
+      "subtype": "companion",
+      "family": "pets",
+      "rarity": "rare",
+      "level": 0,
+      "bonuses": {
+        "autoLoot": false,
+        "hp": 50,
+        "damageBoost": 5
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 30
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 320000,
+      "model": "PET_GUARDIAN_01",
+      "icon": "icon_pet_guardian",
+      "fxProfile": "pet_aura_gold"
+    }
+  ]
+}

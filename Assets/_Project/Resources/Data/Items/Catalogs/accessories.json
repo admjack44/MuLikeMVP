@@ -1,0 +1,132 @@
+{
+  "group": "accessories",
+  "items": [
+    {
+      "id": 2001,
+      "name": "Warrior Ring",
+      "type": "accessory",
+      "subtype": "ring",
+      "family": "rings",
+      "rarity": "rare",
+      "level": 0,
+      "bonuses": {
+        "attackRate": 12,
+        "hp": 25
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 18000,
+      "model": "ACC_RING_WARRIOR_01",
+      "icon": "icon_ring_warrior",
+      "fxProfile": "ring_glow_red"
+    },
+    {
+      "id": 2002,
+      "name": "Mystic Pendant",
+      "type": "accessory",
+      "subtype": "pendant",
+      "family": "pendants",
+      "rarity": "rare",
+      "level": 0,
+      "bonuses": {
+        "mana": 35,
+        "spellPower": 10
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 18500,
+      "model": "ACC_PENDANT_MYSTIC_01",
+      "icon": "icon_pendant_mystic",
+      "fxProfile": "pendant_glow_blue"
+    },
+    {
+      "id": 2003,
+      "name": "Guardian Ring",
+      "type": "accessory",
+      "subtype": "ring",
+      "family": "rings",
+      "rarity": "excellent",
+      "level": 1,
+      "bonuses": {
+        "defense": 12,
+        "damageAbsorb": 3,
+        "hp": 40
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 42000,
+      "model": "ACC_RING_GUARDIAN_01",
+      "icon": "icon_ring_guardian",
+      "fxProfile": "ring_glow_silver"
+    },
+    {
+      "id": 2004,
+      "name": "Pendant of Wind",
+      "type": "accessory",
+      "subtype": "pendant",
+      "family": "pendants",
+      "rarity": "rare",
+      "level": 1,
+      "bonuses": {
+        "attackSpeed": 10,
+        "moveSpeed": 8
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 26000,
+      "model": "ACC_PENDANT_WIND_01",
+      "icon": "icon_pendant_wind",
+      "fxProfile": "pendant_glow_green"
+    },
+    {
+      "id": 2005,
+      "name": "Pendant of Command",
+      "type": "accessory",
+      "subtype": "pendant",
+      "family": "pendants",
+      "rarity": "excellent",
+      "level": 2,
+      "bonuses": {
+        "command": 25,
+        "petDamage": 8,
+        "petDefense": 8
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 20,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 58000,
+      "model": "ACC_PENDANT_COMMAND_01",
+      "icon": "icon_pendant_command",
+      "fxProfile": "pendant_glow_gold"
+    }
+  ]
+}

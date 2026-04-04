@@ -1,0 +1,139 @@
+{
+  "group": "armor",
+  "items": [
+    {
+      "id": 1801,
+      "name": "Bronze Shield",
+      "type": "offhand",
+      "subtype": "shield",
+      "family": "shields",
+      "rarity": "common",
+      "level": 0,
+      "defense": 8,
+      "blockRate": 5,
+      "requirements": {
+        "strength": 22,
+        "agility": 10,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 1400,
+      "model": "SHD_BRONZE_01",
+      "icon": "icon_shield_bronze",
+      "fxProfile": "none"
+    },
+    {
+      "id": 1901,
+      "name": "Leather Helm",
+      "type": "armor",
+      "subtype": "helm",
+      "family": "helms",
+      "rarity": "common",
+      "level": 0,
+      "defense": 5,
+      "requirements": {
+        "strength": 10,
+        "agility": 6,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 500,
+      "model": "ARM_HELM_LEATHER_01",
+      "icon": "icon_helm_leather",
+      "fxProfile": "none"
+    },
+    {
+      "id": 1902,
+      "name": "Scale Armor",
+      "type": "armor",
+      "subtype": "armor",
+      "family": "armors",
+      "rarity": "magic",
+      "level": 1,
+      "defense": 16,
+      "requirements": {
+        "strength": 38,
+        "agility": 14,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 8200,
+      "model": "ARM_CHEST_SCALE_01",
+      "icon": "icon_armor_scale",
+      "fxProfile": "armor_sheen_blue"
+    },
+    {
+      "id": 1903,
+      "name": "Scale Pants",
+      "type": "armor",
+      "subtype": "pants",
+      "family": "pants",
+      "rarity": "magic",
+      "level": 1,
+      "defense": 12,
+      "requirements": {
+        "strength": 34,
+        "agility": 12,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 6100,
+      "model": "ARM_PANTS_SCALE_01",
+      "icon": "icon_pants_scale",
+      "fxProfile": "none"
+    },
+    {
+      "id": 1904,
+      "name": "Scale Gloves",
+      "type": "armor",
+      "subtype": "gloves",
+      "family": "gloves",
+      "rarity": "magic",
+      "level": 1,
+      "defense": 8,
+      "requirements": {
+        "strength": 28,
+        "agility": 10,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 4300,
+      "model": "ARM_GLOVES_SCALE_01",
+      "icon": "icon_gloves_scale",
+      "fxProfile": "none"
+    },
+    {
+      "id": 1905,
+      "name": "Scale Boots",
+      "type": "armor",
+      "subtype": "boots",
+      "family": "boots",
+      "rarity": "magic",
+      "level": 1,
+      "defense": 9,
+      "moveBonus": 1,
+      "requirements": {
+        "strength": 28,
+        "agility": 10,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": false,
+      "maxStack": 1,
+      "sellPrice": 4400,
+      "model": "ARM_BOOTS_SCALE_01",
+      "icon": "icon_boots_scale",
+      "fxProfile": "none"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "group": "consumables",
+  "items": [
+    {
+      "id": 2301,
+      "name": "Small Health Potion",
+      "type": "consumable",
+      "subtype": "potion_hp",
+      "family": "consumables",
+      "rarity": "common",
+      "level": 0,
+      "restore": {
+        "hp": 50
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": true,
+      "maxStack": 20,
+      "sellPrice": 100,
+      "model": "CON_HP_SMALL_01",
+      "icon": "icon_potion_hp_small",
+      "fxProfile": "consume_red"
+    },
+    {
+      "id": 2302,
+      "name": "Small Mana Potion",
+      "type": "consumable",
+      "subtype": "potion_mp",
+      "family": "consumables",
+      "rarity": "common",
+      "level": 0,
+      "restore": {
+        "mana": 50
+      },
+      "requirements": {
+        "strength": 0,
+        "agility": 0,
+        "energy": 0,
+        "command": 0
+      },
+      "stackable": true,
+      "maxStack": 20,
+      "sellPrice": 100,
+      "model": "CON_MP_SMALL_01",
+      "icon": "icon_potion_mp_small",
+      "fxProfile": "consume_blue"
+    }
+  ]
+}

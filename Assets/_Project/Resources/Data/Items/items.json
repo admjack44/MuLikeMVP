@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "catalog": "mvp_items",
+  "layout": "split_by_domain",
+  "note": "Master manifest for item data. Load the source files listed here instead of keeping all items in a single JSON.",
+  "sources": [
+    {
+      "file": "Catalogs/weapons.json",
+      "families": [
+        "swords",
+        "axes",
+        "maces",
+        "spears",
+        "bows",
+        "crossbows",
+        "staffs",
+        "scepters"
+      ]
+    },
+    {
+      "file": "Catalogs/armor.json",
+      "families": [
+        "shields",
+        "helms",
+        "armors",
+        "pants",
+        "gloves",
+        "boots"
+      ]
+    },
+    {
+      "file": "Catalogs/accessories.json",
+      "families": [
+        "rings",
+        "pendants"
+      ]
+    },
+    {
+      "file": "Catalogs/specials.json",
+      "families": [
+        "wings",
+        "pets"
+      ]
+    },
+    {
+      "file": "Catalogs/consumables.json",
+      "families": [
+        "consumables"
+      ]
+    },
+    {
+      "file": "Catalogs/upgrade_materials.json",
+      "families": [
+        "jewels",
+        "materials"
+      ]
+    },
+    {
+      "file": "Catalogs/event_quest.json",
+      "families": [
+        "event_items",
+        "quest_items"
+      ]
+    }
+  ]
+}
