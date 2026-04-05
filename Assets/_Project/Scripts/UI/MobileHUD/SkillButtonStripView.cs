@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,6 +22,9 @@ namespace MuLike.UI.MobileHUD
         }
 
         [SerializeField] private SkillButtonBinding[] _buttons = Array.Empty<SkillButtonBinding>();
+        [SerializeField, Range(5f, 60f)] private float _maxCooldownUiUpdatesPerSecond = 15f;
+
+        private readonly Dictionary<int, float> _nextUiUpdateBySkill = new();
 
         public event Action<int> SkillPressed;
 
@@ -57,6 +61,13 @@ namespace MuLike.UI.MobileHUD
             if (!TryGet(skillId, out SkillButtonBinding binding))
                 return;
 
+            float now = Time.unscaledTime;
+            float minInterval = 1f / Mathf.Clamp(_maxCooldownUiUpdatesPerSecond, 5f, 60f);
+            if (_nextUiUpdateBySkill.TryGetValue(skillId, out float nextAllowedAt) && now < nextAllowedAt)
+                return;
+
+            _nextUiUpdateBySkill[skillId] = now + minInterval;
+
             float normalized = total > 0.001f ? Mathf.Clamp01(remaining / total) : 0f;
 
             if (binding.cooldownFill != null)
@@ -67,6 +78,15 @@ namespace MuLike.UI.MobileHUD
 
             if (binding.button != null)
                 binding.button.interactable = remaining <= 0.01f;
+        }
+
+        public void SetInteractable(int skillId, bool interactable)
+        {
+            if (!TryGet(skillId, out SkillButtonBinding binding))
+                return;
+
+            if (binding.button != null)
+                binding.button.interactable = interactable;
         }
 
         private bool TryGet(int skillId, out SkillButtonBinding binding)

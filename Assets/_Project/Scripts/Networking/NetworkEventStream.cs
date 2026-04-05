@@ -31,6 +31,8 @@ namespace MuLike.Networking
         public event Action<int, bool, int, bool> AttackResponseReceived; // targetId, hitSuccess, damage, isCritical
         public event Action<int> EntityDiedReceived; // entityId
         public event Action<int, float, float, float> EntityRespawnedReceived; // entityId, x, y, z
+        public event Action<SnapshotData> FullSnapshotReceived;
+        public event Action<SnapshotData> DeltaSnapshotReceived;
         public event Action<bool, int, int, string> SkillResponseReceived;
         public event Action<string> ErrorReceived;
         public event Action<ProtocolError, uint> TypedErrorReceived;
@@ -173,6 +175,28 @@ namespace MuLike.Networking
                 }
 
                 EntityRespawnedReceived?.Invoke(entityId, x, y, z);
+            });
+
+            _router.Register(NetOpcodes.FullSnapshot, payload =>
+            {
+                if (!ServerMessageParser.TryParseSnapshotData(payload, out SnapshotData snapshot))
+                {
+                    ErrorReceived?.Invoke("Invalid FullSnapshot payload.");
+                    return;
+                }
+
+                FullSnapshotReceived?.Invoke(snapshot);
+            });
+
+            _router.Register(NetOpcodes.DeltaSnapshot, payload =>
+            {
+                if (!ServerMessageParser.TryParseSnapshotData(payload, out SnapshotData snapshot))
+                {
+                    ErrorReceived?.Invoke("Invalid DeltaSnapshot payload.");
+                    return;
+                }
+
+                DeltaSnapshotReceived?.Invoke(snapshot);
             });
 
             _router.Register(NetOpcodes.SkillCastResponse, payload =>

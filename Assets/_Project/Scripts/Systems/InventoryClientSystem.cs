@@ -36,6 +36,37 @@ namespace MuLike.Systems
         public sealed class InventorySnapshot
         {
             public List<InventorySlotSnapshot> slots = new();
+            public List<QuickSlotSnapshot> quickSlots = new();
+        }
+
+        public enum QuickSlotKind
+        {
+            Unknown = 0,
+            HpPotion = 1,
+            MpPotion = 2
+        }
+
+        [Serializable]
+        public struct QuickSlotSnapshot
+        {
+            public QuickSlotKind kind;
+            public int slotIndex;
+        }
+
+        [Serializable]
+        public struct InventoryDelta
+        {
+            public bool HasUpsertSlot;
+            public InventorySlotSnapshot UpsertSlot;
+
+            public bool HasRemoveSlot;
+            public int RemoveSlotIndex;
+
+            public bool HasUpsertQuickSlot;
+            public QuickSlotSnapshot UpsertQuickSlot;
+
+            public bool HasRemoveQuickSlot;
+            public QuickSlotKind RemoveQuickSlotKind;
         }
 
         public struct InventorySlot
@@ -141,6 +172,7 @@ namespace MuLike.Systems
 
         private readonly Dictionary<int, InventorySlot> _slotsByIndex = new();
         private readonly List<InventorySlot> _slotsCache = new();
+        private readonly Dictionary<QuickSlotKind, int> _quickSlots = new();
         private readonly CatalogResolver _catalogResolver;
 
         public int SlotCapacity { get; }
@@ -152,6 +184,7 @@ namespace MuLike.Systems
         public event Action<InventoryMoveEvent> OnItemMoved;
         public event Action<InventorySplitEvent> OnStackSplit;
         public event Action<InventorySwapEvent> OnSlotsSwapped;
+        public event Action OnQuickSlotsChanged;
 
         public InventoryClientSystem(int slotCapacity = 128, CatalogResolver catalogResolver = null)
         {
@@ -249,7 +282,103 @@ namespace MuLike.Systems
 
         public void ApplySnapshot(InventorySnapshot snapshot)
         {
+            _quickSlots.Clear();
             ApplySnapshot(snapshot != null ? snapshot.slots : null);
+
+            if (snapshot == null || snapshot.quickSlots == null)
+            {
+                OnQuickSlotsChanged?.Invoke();
+                return;
+            }
+
+            for (int i = 0; i < snapshot.quickSlots.Count; i++)
+            {
+                QuickSlotSnapshot quick = snapshot.quickSlots[i];
+                if (quick.kind == QuickSlotKind.Unknown)
+                    continue;
+
+                if (!IsValidSlotIndex(quick.slotIndex))
+                    continue;
+
+                _quickSlots[quick.kind] = quick.slotIndex;
+            }
+
+            OnQuickSlotsChanged?.Invoke();
+        }
+
+        public void ApplyDelta(InventoryDelta delta)
+        {
+            bool inventoryChanged = false;
+            bool quickSlotsChanged = false;
+
+            if (delta.HasUpsertSlot)
+            {
+                InventorySlot slot = InventorySlot.FromSnapshot(delta.UpsertSlot);
+                if (TryValidateSlot(slot, out _))
+                {
+                    StoreSlot(slot);
+                    inventoryChanged = true;
+                }
+            }
+
+            if (delta.HasRemoveSlot && IsValidSlotIndex(delta.RemoveSlotIndex))
+            {
+                if (_slotsByIndex.Remove(delta.RemoveSlotIndex))
+                    inventoryChanged = true;
+            }
+
+            if (delta.HasUpsertQuickSlot)
+            {
+                QuickSlotSnapshot quick = delta.UpsertQuickSlot;
+                if (quick.kind != QuickSlotKind.Unknown && IsValidSlotIndex(quick.slotIndex))
+                {
+                    _quickSlots[quick.kind] = quick.slotIndex;
+                    quickSlotsChanged = true;
+                }
+            }
+
+            if (delta.HasRemoveQuickSlot && delta.RemoveQuickSlotKind != QuickSlotKind.Unknown)
+            {
+                if (_quickSlots.Remove(delta.RemoveQuickSlotKind))
+                    quickSlotsChanged = true;
+            }
+
+            if (inventoryChanged)
+                RebuildCacheAndBroadcast();
+
+            if (quickSlotsChanged)
+                OnQuickSlotsChanged?.Invoke();
+        }
+
+        public void SetQuickSlot(QuickSlotKind kind, int slotIndex)
+        {
+            if (kind == QuickSlotKind.Unknown)
+                return;
+
+            if (!IsValidSlotIndex(slotIndex))
+                return;
+
+            _quickSlots[kind] = slotIndex;
+            OnQuickSlotsChanged?.Invoke();
+        }
+
+        public void ClearQuickSlot(QuickSlotKind kind)
+        {
+            if (kind == QuickSlotKind.Unknown)
+                return;
+
+            if (_quickSlots.Remove(kind))
+                OnQuickSlotsChanged?.Invoke();
+        }
+
+        public bool TryGetQuickSlot(QuickSlotKind kind, out int slotIndex)
+        {
+            return _quickSlots.TryGetValue(kind, out slotIndex);
+        }
+
+        public IReadOnlyDictionary<QuickSlotKind, int> GetQuickSlots()
+        {
+            return _quickSlots;
         }
 
         public void UpdateSlot(ItemSlot slot)
@@ -533,6 +662,15 @@ namespace MuLike.Systems
             for (int i = 0; i < _slotsCache.Count; i++)
             {
                 snapshot.slots.Add(_slotsCache[i].ToSnapshot());
+            }
+
+            foreach (KeyValuePair<QuickSlotKind, int> pair in _quickSlots)
+            {
+                snapshot.quickSlots.Add(new QuickSlotSnapshot
+                {
+                    kind = pair.Key,
+                    slotIndex = pair.Value
+                });
             }
 
             return snapshot;

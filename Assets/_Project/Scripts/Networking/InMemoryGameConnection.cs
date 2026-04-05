@@ -9,10 +9,13 @@ namespace MuLike.Networking
     /// </summary>
     public sealed class InMemoryGameConnection : IGameConnection
     {
+        private const double SnapshotPollIntervalSeconds = 0.1d;
+
         private InMemoryGatewayBridge _bridge;
         private ServerApplication _serverApp;
         private Guid _sessionId;
         private bool _isConnected;
+        private DateTime _nextSnapshotPollUtc;
 
         public bool IsConnected => _isConnected;
 
@@ -29,6 +32,7 @@ namespace MuLike.Networking
             _bridge = startup.bridge;
             _sessionId = startup.sessionId;
             _isConnected = true;
+            _nextSnapshotPollUtc = DateTime.UtcNow;
 
             Connected?.Invoke();
         }
@@ -43,7 +47,14 @@ namespace MuLike.Networking
                 PacketReceived?.Invoke(response);
             }
 
+            PumpServerEvents(forceImmediate: true);
+
             return Task.CompletedTask;
+        }
+
+        public void PumpServerEvents()
+        {
+            PumpServerEvents(forceImmediate: false);
         }
 
         public void Disconnect()
@@ -57,6 +68,23 @@ namespace MuLike.Networking
             _bridge = null;
 
             Disconnected?.Invoke();
+        }
+
+        private void PumpServerEvents(bool forceImmediate)
+        {
+            if (!_isConnected || _bridge == null)
+                return;
+
+            DateTime now = DateTime.UtcNow;
+            if (!forceImmediate && now < _nextSnapshotPollUtc)
+                return;
+
+            _nextSnapshotPollUtc = now.AddSeconds(SnapshotPollIntervalSeconds);
+
+            if (_bridge.TryPullSnapshotPacket(_sessionId, out byte[] packet) && packet != null)
+            {
+                PacketReceived?.Invoke(packet);
+            }
         }
     }
 }

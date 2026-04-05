@@ -10,10 +10,14 @@ namespace MuLike.Gameplay.Combat
         public string DisplayName;
         public float Range;
         public float Cooldown;
+        public int ManaCost;
+        public int StaminaCost;
+        public int AutoPriority;
+        public bool AllowAutoCast;
         public bool LocksMovement;
         public KeyCode Hotkey;
 
-        public bool IsValid => SkillId >= 0 && Cooldown >= 0f && Range >= 0f;
+        public bool IsValid => SkillId >= 0 && Cooldown >= 0f && Range >= 0f && ManaCost >= 0 && StaminaCost >= 0;
     }
 
     public enum CombatFeedbackType

@@ -5,8 +5,11 @@ namespace MuLike.Systems
     public enum ChatChannel
     {
         General = 0,
-        System = 1,
-        Private = 2
+        World = 0,
+        Party = 1,
+        Guild = 2,
+        System = 3,
+        Private = 4
     }
 
     [Serializable]
@@ -33,7 +36,9 @@ namespace MuLike.Systems
             {
                 ChatChannel.System => $"[{hhmm}] [System] {Text}",
                 ChatChannel.Private => $"[{hhmm}] [PM] {sender} -> {Target}: {Text}",
-                _ => $"[{hhmm}] [{sender}] {Text}"
+                ChatChannel.Party => $"[{hhmm}] [Party] [{sender}] {Text}",
+                ChatChannel.Guild => $"[{hhmm}] [Guild] [{sender}] {Text}",
+                _ => $"[{hhmm}] [World] [{sender}] {Text}"
             };
         }
     }

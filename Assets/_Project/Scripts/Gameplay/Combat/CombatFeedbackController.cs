@@ -1,3 +1,4 @@
+using MuLike.Performance.Pooling;
 using UnityEngine;
 
 namespace MuLike.Gameplay.Combat
@@ -9,6 +10,8 @@ namespace MuLike.Gameplay.Combat
     {
         [SerializeField] private ParticleSystem _hitEffect;
         [SerializeField] private ParticleSystem _critEffect;
+        [SerializeField] private string _hitPoolKey = "vfx.hit";
+        [SerializeField] private string _critPoolKey = "vfx.crit";
         [SerializeField] private AudioSource _audioSource;
         [SerializeField] private AudioClip _hitClip;
         [SerializeField] private AudioClip _critClip;
@@ -28,14 +31,44 @@ namespace MuLike.Gameplay.Combat
         private void SpawnEffect(ParticleSystem prefab, Vector3 position)
         {
             if (prefab == null) return;
-            ParticleSystem instance = Instantiate(prefab, position, Quaternion.identity);
-            Destroy(instance.gameObject, instance.main.duration + 0.5f);
+
+            ParticleSystem instance = SpawnParticle(prefab, position);
+            if (instance == null)
+                return;
+
+            instance.Clear(true);
+            instance.Play(true);
+
+            PoolAutoRelease autoRelease = instance.GetComponent<PoolAutoRelease>();
+            if (autoRelease == null)
+                autoRelease = instance.gameObject.AddComponent<PoolAutoRelease>();
+
+            float lifetime = instance.main.duration + instance.main.startLifetime.constantMax + 0.15f;
+            autoRelease.Arm(lifetime);
         }
 
         private void PlayClip(AudioClip clip)
         {
             if (_audioSource != null && clip != null)
                 _audioSource.PlayOneShot(clip);
+        }
+
+        private ParticleSystem SpawnParticle(ParticleSystem prefab, Vector3 position)
+        {
+            MobilePoolManager manager = MobilePoolManager.Instance;
+            string key = prefab == _critEffect ? _critPoolKey : _hitPoolKey;
+
+            if (manager != null && !string.IsNullOrWhiteSpace(key)
+                && manager.TrySpawn(key, position, Quaternion.identity, out GameObject pooledObject))
+            {
+                ParticleSystem pooledParticle = pooledObject.GetComponent<ParticleSystem>();
+                if (pooledParticle != null)
+                    return pooledParticle;
+
+                manager.Release(pooledObject);
+            }
+
+            return Instantiate(prefab, position, Quaternion.identity);
         }
     }
 }

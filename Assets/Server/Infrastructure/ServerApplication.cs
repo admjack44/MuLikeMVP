@@ -17,7 +17,10 @@ using MuLike.Server.Game.World;
 using MuLike.Server.Gateway;
 using MuLike.Server.Infrastructure.ContentPipeline;
 using MuLike.Server.Persistence.Abstractions;
+using MuLike.Server.Persistence.Core;
+using MuLike.Server.Persistence.InMemory;
 using MuLike.Server.Persistence.Sqlite;
+using MuLike.Server.Persistence.Services;
 using MuLike.Shared.Protocol;
 
 namespace MuLike.Server.Infrastructure
@@ -36,6 +39,10 @@ namespace MuLike.Server.Infrastructure
         private readonly TargetingSystem _targetingSystem;
         private readonly AutoAttackSystem _autoAttackSystem;
         private readonly SkillDatabase _skillDatabase;
+        private readonly SnapshotGenerator _snapshotGenerator;
+        private readonly MmorpgRuntimePersistenceOrchestrator _runtimePersistence;
+        private readonly float _checkpointIntervalSeconds;
+        private float _nextCheckpointAt;
         private float _lastDeltaTime;
 
         public event Action<int, float, float, float> OnPlayerMoved;
@@ -62,8 +69,11 @@ namespace MuLike.Server.Infrastructure
             CharacterRepository characterRepository,
             InventoryRepository inventoryRepository,
             EquipmentRepository equipmentRepository,
+            SkillLoadoutRepository skillLoadoutRepository,
             PetRepository petRepository,
             SqliteServerPersistenceService persistenceService,
+            MmorpgRuntimePersistenceOrchestrator runtimePersistence,
+            float checkpointIntervalSeconds,
             GameLoop gameLoop)
         {
             SessionManager = sessionManager;
@@ -86,9 +96,14 @@ namespace MuLike.Server.Infrastructure
             CharacterRepository = characterRepository;
             InventoryRepository = inventoryRepository;
             EquipmentRepository = equipmentRepository;
+            SkillLoadoutRepository = skillLoadoutRepository;
             PetRepository = petRepository;
             _persistenceService = persistenceService;
             _gameLoop = gameLoop;
+            _runtimePersistence = runtimePersistence;
+            _checkpointIntervalSeconds = MathF.Max(10f, checkpointIntervalSeconds);
+            _nextCheckpointAt = _checkpointIntervalSeconds;
+            _snapshotGenerator = new SnapshotGenerator(WorldManager, new DistanceBasedAOI(45f, ResolveEntityForAoi));
             _lastDeltaTime = 0.05f; // Default 20 ticks/sec
 
             _autoAttackSystem.AttackPerformed += HandleAttackPerformed;
@@ -119,6 +134,7 @@ namespace MuLike.Server.Infrastructure
         public CharacterRepository CharacterRepository { get; }
         public InventoryRepository InventoryRepository { get; }
         public EquipmentRepository EquipmentRepository { get; }
+        public SkillLoadoutRepository SkillLoadoutRepository { get; }
         public PetRepository PetRepository { get; }
 
         public bool IsRunning { get; private set; }
@@ -140,6 +156,11 @@ namespace MuLike.Server.Infrastructure
             var sqliteUowFactory = new SqliteServerUnitOfWorkFactory(sqliteConnectionFactory);
             var accountStore = new SqliteAuthAccountStore(sqliteUowFactory);
             var persistenceService = new SqliteServerPersistenceService(sqliteUowFactory);
+
+            // Initial coherent persistence layer is in-memory and can be replaced by SQLite/PostgreSQL UoW factories.
+            var inMemoryPersistenceStore = new InMemoryMmorpgPersistenceStore();
+            var inMemoryPersistenceFactory = new InMemoryMmorpgPersistenceUnitOfWorkFactory(inMemoryPersistenceStore);
+            var coherentPersistenceService = new InMemoryMmorpgPersistenceService(inMemoryPersistenceFactory);
 
             var authOptions = new AuthOptions
             {
@@ -166,8 +187,24 @@ namespace MuLike.Server.Infrastructure
                 worldManager,
                 spawnManager);
 
+            var characterRepository = new CharacterRepository();
+            var inventoryRepository = new InventoryRepository();
+            var equipmentRepository = new EquipmentRepository();
+            var skillLoadoutRepository = new SkillLoadoutRepository();
+            var petRepository = new PetRepository();
+
+            var sessionManager = new SessionManager();
+            var runtimePersistence = new MmorpgRuntimePersistenceOrchestrator(
+                coherentPersistenceService,
+                sessionManager,
+                characterRepository,
+                inventoryRepository,
+                equipmentRepository,
+                skillLoadoutRepository,
+                petRepository);
+
             var app = new ServerApplication(
-                new SessionManager(),
+                sessionManager,
                 new AuthService(accountStore, sessionStore, passwordHasher, new TokenService(authOptions), authOptions),
                 worldManager,
                 spawnManager,
@@ -184,11 +221,14 @@ namespace MuLike.Server.Infrastructure
                 new LootSystem(),
                 new StatRebuildService(),
                 new DeathSystem(),
-                new CharacterRepository(),
-                new InventoryRepository(),
-                new EquipmentRepository(),
-                new PetRepository(),
+                characterRepository,
+                inventoryRepository,
+                equipmentRepository,
+                skillLoadoutRepository,
+                petRepository,
                 persistenceService,
+                runtimePersistence,
+                checkpointIntervalSeconds: 30f,
                 new GameLoop(ticksPerSecond));
 
             if (!importedWorldContent)
@@ -208,6 +248,8 @@ namespace MuLike.Server.Infrastructure
         public void Stop()
         {
             if (!IsRunning) return;
+
+            _runtimePersistence?.SaveAllOnlineCheckpoint(DateTime.UtcNow);
             IsRunning = false;
             _gameLoop.Stop();
         }
@@ -345,6 +387,8 @@ namespace MuLike.Server.Infrastructure
 
             _persistenceService.UpsertCharacterAggregate(aggregate, DateTime.UtcNow, markLogin: true, markLogout: false);
 
+            _runtimePersistence?.SaveSessionOnLogin(connection, accountId);
+
             if (WorldManager.TryGetMap(DefaultMapId, out MapInstance map) && !map.TryGetEntity(player.Id, out _))
                 map.AddEntity(player);
 
@@ -367,10 +411,14 @@ namespace MuLike.Server.Infrastructure
 
                 CharacterAggregatePersistenceModel aggregate = _persistenceService.BuildAggregateFromRuntime(player, inventory, equipment, activePet);
                 _persistenceService.UpsertCharacterAggregate(aggregate, DateTime.UtcNow, markLogin: false, markLogout: true);
+                _runtimePersistence?.SaveAndCloseSession(connection, DateTime.UtcNow);
 
                 CharacterRepository.Remove(characterId);
                 PetRepository.ClearActivePet(characterId);
             }
+
+            if (!connection.CharacterId.HasValue)
+                _runtimePersistence?.SaveAndCloseSession(connection, DateTime.UtcNow);
 
             if (connection.CharacterId.HasValue &&
                 WorldManager.TryGetMap(DefaultMapId, out var map))
@@ -415,6 +463,46 @@ namespace MuLike.Server.Infrastructure
                 return false;
 
             _autoAttackSystem.StartAutoAttack(player, target);
+            return true;
+        }
+
+        public bool TryCreateSnapshotPacket(Guid sessionId, out byte[] packet)
+        {
+            packet = null;
+
+            if (!SessionManager.TryGet(sessionId, out ClientConnection connection))
+                return false;
+
+            if (!connection.IsAuthenticated || !connection.CharacterId.HasValue)
+                return false;
+
+            if (!WorldManager.TryGetMap(DefaultMapId, out MapInstance map))
+                return false;
+
+            if (!map.TryGetEntity(connection.CharacterId.Value, out Entity observer) || observer == null)
+                return false;
+
+            DateTime nowUtc = DateTime.UtcNow;
+            bool sendFull = connection.LastFullSnapshotSequence == 0;
+
+            if (!sendFull)
+            {
+                TimeSpan sinceLast = nowUtc - connection.LastSnapshotSentUtc;
+                if (sinceLast < TimeSpan.FromMilliseconds(100))
+                    return false;
+
+                if (sinceLast > TimeSpan.FromSeconds(2))
+                    sendFull = true;
+            }
+
+            SnapshotData snapshot = sendFull
+                ? _snapshotGenerator.CreateFullSnapshot(observer.Id, DefaultMapId)
+                : _snapshotGenerator.CreateDeltaSnapshot(observer.Id, connection.LastSnapshotEntities, DefaultMapId);
+
+            UpdateSessionSnapshotState(connection, snapshot, sendFull);
+            connection.LastSnapshotSentUtc = nowUtc;
+
+            packet = PacketContracts.CreateSnapshotData(snapshot, sendFull);
             return true;
         }
 
@@ -577,12 +665,27 @@ namespace MuLike.Server.Infrastructure
 
         public bool TryDeleteCharacter(int accountId, int characterId)
         {
-            return _persistenceService.TryDeleteCharacter(accountId, characterId);
+            bool softDelete = _runtimePersistence?.SoftDeleteCharacter(accountId, characterId, DateTime.UtcNow) ?? false;
+            bool sqliteDelete = _persistenceService.TryDeleteCharacter(accountId, characterId);
+            return softDelete || sqliteDelete;
         }
 
         public bool TrySelectCharacter(Guid sessionId, int characterId, out int selectedCharacterId)
         {
             selectedCharacterId = 0;
+
+            if (SessionManager.TryGet(sessionId, out var activeConnection) &&
+                _runtimePersistence != null &&
+                _runtimePersistence.TryLoadCharacterIntoRuntime(characterId, out _))
+            {
+                activeConnection.MarkAuthenticated(characterId);
+                selectedCharacterId = characterId;
+
+                if (WorldManager.TryGetMap(DefaultMapId, out var runtimeMap) && CharacterRepository.TryGet(characterId, out PlayerEntity loadedPlayer))
+                    runtimeMap.AddEntity(loadedPlayer);
+
+                return true;
+            }
 
             if (!SessionManager.TryGet(sessionId, out var connection)) return false;
             if (!_persistenceService.TryLoadCharacterAggregateByCharacterId(characterId, out CharacterAggregatePersistenceModel aggregate))
@@ -657,6 +760,7 @@ namespace MuLike.Server.Infrastructure
                 PetRepository.ClearActivePet(characterId);
 
             _persistenceService.UpsertCharacterAggregate(aggregate, DateTime.UtcNow, markLogin: true, markLogout: false);
+            _runtimePersistence?.SaveSessionOnLogin(connection, accountId);
 
             if (WorldManager.TryGetMap(DefaultMapId, out var map))
             {
@@ -765,6 +869,13 @@ namespace MuLike.Server.Infrastructure
             // Handle monster aggro and deaths
             HandleMonsterAggro(deltaTime);
             HandleDeaths();
+
+            _nextCheckpointAt -= deltaTime;
+            if (_nextCheckpointAt <= 0f)
+            {
+                _runtimePersistence?.SaveAllOnlineCheckpoint(DateTime.UtcNow);
+                _nextCheckpointAt = _checkpointIntervalSeconds;
+            }
         }
 
         private void HandleMonsterAggro(float deltaTime)
@@ -898,6 +1009,49 @@ namespace MuLike.Server.Infrastructure
                 entity.X + (dx * ratio),
                 entity.Y + (dy * ratio),
                 entity.Z + (dz * ratio));
+        }
+
+        private Entity ResolveEntityForAoi(int entityId)
+        {
+            if (entityId <= 0)
+                return null;
+
+            if (!WorldManager.TryGetMap(DefaultMapId, out MapInstance map))
+                return null;
+
+            map.TryGetEntity(entityId, out Entity entity);
+            return entity;
+        }
+
+        private static void UpdateSessionSnapshotState(ClientConnection connection, SnapshotData snapshot, bool isFull)
+        {
+            if (connection == null || snapshot == null)
+                return;
+
+            if (isFull)
+            {
+                connection.LastSnapshotEntities.Clear();
+                connection.LastFullSnapshotSequence = snapshot.SequenceNumber;
+            }
+
+            if (snapshot.Entities == null)
+                return;
+
+            for (int i = 0; i < snapshot.Entities.Count; i++)
+            {
+                SnapshotEntityData entity = snapshot.Entities[i];
+                if (entity == null)
+                    continue;
+
+                bool remove = !entity.IsAlive || entity.EntityType == 0;
+                if (remove)
+                {
+                    connection.LastSnapshotEntities.Remove(entity.EntityId);
+                    continue;
+                }
+
+                connection.LastSnapshotEntities[entity.EntityId] = entity;
+            }
         }
 
         private static int[] ParseSockets(string raw)

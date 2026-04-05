@@ -53,7 +53,10 @@ namespace MuLike.UI.CharacterSelect
                 name = name,
                 classId = classId,
                 level = 1,
-                mapId = 1
+                powerScore = 120,
+                mapId = 1,
+                mapName = "Lorencia",
+                isLastPlayed = false
             };
 
             _characters.Add(created);
@@ -109,7 +112,7 @@ namespace MuLike.UI.CharacterSelect
                 success = true,
                 message = "Entering world.",
                 characterId = character.characterId,
-                sceneName = "World_Dev",
+                sceneName = character.mapId == 1 ? "Town_01" : "World_Dev",
                 mapId = character.mapId
             });
         }
@@ -124,7 +127,10 @@ namespace MuLike.UI.CharacterSelect
                 name = "KnightOne",
                 classId = "DarkKnight",
                 level = 35,
-                mapId = 1
+                powerScore = 12850,
+                mapId = 1,
+                mapName = "Lorencia",
+                isLastPlayed = true
             });
 
             _characters.Add(new CharacterSummaryDto
@@ -133,7 +139,10 @@ namespace MuLike.UI.CharacterSelect
                 name = "ElfNova",
                 classId = "FairyElf",
                 level = 22,
-                mapId = 1
+                powerScore = 7640,
+                mapId = 2,
+                mapName = "Noria",
+                isLastPlayed = false
             });
         }
 

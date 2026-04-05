@@ -47,25 +47,29 @@ namespace MuLike.Tools.Editor
 
             VirtualJoystickView joystick = BuildJoystick(bottomLeft.transform);
             SkillButtonStripView skillStrip = BuildSkillStrip(bottomRight.transform);
+            PotionQuickSlotStripView potionQuickSlots = BuildPotionQuickSlots(bottomRight.transform);
             Toggle autoAttack = BuildAutoAttack(bottomRight.transform);
             TargetPortraitView portrait = BuildTargetPortrait(topLeft.transform);
             BuildMinimapPlaceholder(topRight.transform, out Button minimapButton);
-            BuildTopButtons(topRight.transform, out Button chatButton, out Button inventoryButton);
-            BuildResourceBars(topLeft.transform, out HudResourceBarView hp, out HudResourceBarView mp, out HudResourceBarView sd, out HudResourceBarView combo);
+            BuildTopButtons(topRight.transform, out Button chatButton, out Button inventoryButton, out Button characterButton, out Button mapButton);
+            BuildResourceBars(topLeft.transform, out HudResourceBarView hp, out HudResourceBarView mp, out HudResourceBarView sd, out HudResourceBarView stamina);
 
             MobileHudView view = safeAreaGo.AddComponent<MobileHudView>();
             SerializedObject viewSo = new SerializedObject(view);
             viewSo.FindProperty("_leftJoystick").objectReferenceValue = joystick;
             viewSo.FindProperty("_skillStrip").objectReferenceValue = skillStrip;
+            viewSo.FindProperty("_potionQuickSlots").objectReferenceValue = potionQuickSlots;
             viewSo.FindProperty("_autoAttackToggle").objectReferenceValue = autoAttack;
             viewSo.FindProperty("_targetPortrait").objectReferenceValue = portrait;
             viewSo.FindProperty("_hpBar").objectReferenceValue = hp;
             viewSo.FindProperty("_mpBar").objectReferenceValue = mp;
             viewSo.FindProperty("_sdBar").objectReferenceValue = sd;
-            viewSo.FindProperty("_comboBar").objectReferenceValue = combo;
+            viewSo.FindProperty("_staminaBar").objectReferenceValue = stamina;
             viewSo.FindProperty("_chatButton").objectReferenceValue = chatButton;
             viewSo.FindProperty("_inventoryButton").objectReferenceValue = inventoryButton;
             viewSo.FindProperty("_minimapButton").objectReferenceValue = minimapButton;
+            viewSo.FindProperty("_characterButton").objectReferenceValue = characterButton;
+            viewSo.FindProperty("_mapButton").objectReferenceValue = mapButton;
             viewSo.ApplyModifiedPropertiesWithoutUndo();
 
             MobileHudController controller = safeAreaGo.AddComponent<MobileHudController>();
@@ -225,7 +229,7 @@ namespace MuLike.Tools.Editor
             return view;
         }
 
-        private static void BuildResourceBars(Transform parent, out HudResourceBarView hp, out HudResourceBarView mp, out HudResourceBarView sd, out HudResourceBarView combo)
+        private static void BuildResourceBars(Transform parent, out HudResourceBarView hp, out HudResourceBarView mp, out HudResourceBarView sd, out HudResourceBarView stamina)
         {
             GameObject panel = CreateRect("ResourceBars", parent, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(24f, 24f), new Vector2(-24f, 220f));
             VerticalLayoutGroup layout = panel.AddComponent<VerticalLayoutGroup>();
@@ -237,7 +241,7 @@ namespace MuLike.Tools.Editor
             hp = CreateResourceBar(panel.transform, "HP");
             mp = CreateResourceBar(panel.transform, "MP");
             sd = CreateResourceBar(panel.transform, "SD");
-            combo = CreateResourceBar(panel.transform, "COMBO");
+            stamina = CreateResourceBar(panel.transform, "STA");
         }
 
         private static HudResourceBarView CreateResourceBar(Transform parent, string label)
@@ -294,7 +298,7 @@ namespace MuLike.Tools.Editor
             text.alignment = TextAlignmentOptions.Center;
         }
 
-        private static void BuildTopButtons(Transform parent, out Button chatButton, out Button inventoryButton)
+        private static void BuildTopButtons(Transform parent, out Button chatButton, out Button inventoryButton, out Button characterButton, out Button mapButton)
         {
             GameObject panel = CreateRect("TopButtons", parent, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-520f, -88f), new Vector2(-250f, -24f));
             HorizontalLayoutGroup layout = panel.AddComponent<HorizontalLayoutGroup>();
@@ -304,6 +308,63 @@ namespace MuLike.Tools.Editor
 
             chatButton = CreateSimpleButton(panel.transform, "ChatButton", "CHAT");
             inventoryButton = CreateSimpleButton(panel.transform, "InventoryButton", "INVENTORY");
+            characterButton = CreateSimpleButton(panel.transform, "CharacterButton", "CHAR");
+            mapButton = CreateSimpleButton(panel.transform, "MapButton", "MAP");
+        }
+
+        private static PotionQuickSlotStripView BuildPotionQuickSlots(Transform parent)
+        {
+            GameObject strip = CreateRect("PotionQuickSlots", parent, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-480f, 24f), new Vector2(-300f, 220f));
+            VerticalLayoutGroup layout = strip.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 10f;
+            layout.childControlHeight = false;
+            layout.childControlWidth = true;
+            layout.childAlignment = TextAnchor.LowerRight;
+
+            PotionQuickSlotStripView view = strip.AddComponent<PotionQuickSlotStripView>();
+            SerializedObject so = new SerializedObject(view);
+            SerializedProperty slots = so.FindProperty("_slots");
+            slots.arraySize = 2;
+
+            BuildPotionSlotUi(strip.transform, slots.GetArrayElementAtIndex(0), 1, "HP");
+            BuildPotionSlotUi(strip.transform, slots.GetArrayElementAtIndex(1), 2, "MP");
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        private static void BuildPotionSlotUi(Transform parent, SerializedProperty slot, int slotId, string label)
+        {
+            GameObject root = CreateRect($"Potion_{label}", parent, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-150f, 0f), new Vector2(0f, 70f));
+            Image bg = root.AddComponent<Image>();
+            bg.color = new Color(0.1f, 0.1f, 0.1f, 0.88f);
+            Button button = root.AddComponent<Button>();
+
+            GameObject labelGo = CreateRect("Label", root.transform, new Vector2(0f, 0f), new Vector2(0.6f, 1f), new Vector2(8f, 4f), new Vector2(-4f, -4f));
+            TMP_Text labelText = AddText(labelGo, label, 22f);
+            labelText.alignment = TextAlignmentOptions.MidlineLeft;
+
+            GameObject countGo = CreateRect("Count", root.transform, new Vector2(0.6f, 0f), new Vector2(1f, 1f), new Vector2(4f, 4f), new Vector2(-8f, -4f));
+            TMP_Text countText = AddText(countGo, "0", 22f);
+            countText.alignment = TextAlignmentOptions.MidlineRight;
+
+            GameObject cooldownGo = CreateRect("CooldownFill", root.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Image cooldownFill = cooldownGo.AddComponent<Image>();
+            cooldownFill.color = new Color(0f, 0f, 0f, 0.55f);
+            cooldownFill.type = Image.Type.Filled;
+            cooldownFill.fillMethod = Image.FillMethod.Radial360;
+            cooldownFill.fillAmount = 0f;
+
+            GameObject cooldownTextGo = CreateRect("CooldownText", root.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            TMP_Text cooldownText = AddText(cooldownTextGo, string.Empty, 28f);
+            cooldownText.alignment = TextAlignmentOptions.Center;
+
+            slot.FindPropertyRelative("slotId").intValue = slotId;
+            slot.FindPropertyRelative("button").objectReferenceValue = button;
+            slot.FindPropertyRelative("labelText").objectReferenceValue = labelText;
+            slot.FindPropertyRelative("countText").objectReferenceValue = countText;
+            slot.FindPropertyRelative("cooldownFill").objectReferenceValue = cooldownFill;
+            slot.FindPropertyRelative("cooldownText").objectReferenceValue = cooldownText;
         }
 
         private static Button CreateSimpleButton(Transform parent, string name, string label)

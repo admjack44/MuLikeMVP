@@ -9,15 +9,22 @@ namespace MuLike.Server.Infrastructure
     public sealed class InMemoryGatewayBridge
     {
         private readonly ServerPacketRouter _router;
+        private readonly ServerApplication _app;
 
         public InMemoryGatewayBridge(ServerApplication app)
         {
+            _app = app;
             _router = new ServerPacketRouter(app);
         }
 
         public byte[] Send(Guid sessionId, byte[] packet)
         {
             return _router.HandlePacket(sessionId, packet);
+        }
+
+        public bool TryPullSnapshotPacket(Guid sessionId, out byte[] packet)
+        {
+            return _app.TryCreateSnapshotPacket(sessionId, out packet);
         }
     }
 }

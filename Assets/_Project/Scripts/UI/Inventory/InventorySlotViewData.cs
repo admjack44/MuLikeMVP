@@ -20,5 +20,16 @@ namespace MuLike.UI.Inventory
             Icon = icon;
             IsEmpty = isEmpty;
         }
+
+        public static InventorySlotViewData FromItemInstance(in ItemInstanceViewData item)
+        {
+            return new InventorySlotViewData(
+                item.SlotIndex,
+                item.ItemId,
+                item.ItemName,
+                item.Quantity,
+                item.Icon,
+                item.IsEmpty);
+        }
     }
 }

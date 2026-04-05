@@ -9,7 +9,10 @@ namespace MuLike.Data.DTO
         public string name;
         public string classId;
         public int level;
+        public int powerScore;
         public int mapId;
+        public string mapName;
+        public bool isLastPlayed;
     }
 
     [Serializable]
@@ -35,5 +38,25 @@ namespace MuLike.Data.DTO
         public int characterId;
         public string sceneName;
         public int mapId;
+    }
+
+    [Serializable]
+    public class CharacterListResponseDto
+    {
+        public bool success;
+        public string message;
+        public CharacterSummaryDto[] characters;
+    }
+
+    [Serializable]
+    public class DeleteCharacterRequestDto
+    {
+        public int characterId;
+    }
+
+    [Serializable]
+    public class EnterWorldRequestDto
+    {
+        public int characterId;
     }
 }

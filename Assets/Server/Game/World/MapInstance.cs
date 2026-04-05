@@ -31,6 +31,11 @@ namespace MuLike.Server.Game.World
             return _entities.Values;
         }
 
+        public IReadOnlyCollection<Entity> GetAllEntities()
+        {
+            return _entities.Values;
+        }
+
         public bool TryGetEntity(int entityId, out Entity entity)
         {
             return _entities.TryGetValue(entityId, out entity);

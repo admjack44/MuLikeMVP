@@ -1,7 +1,11 @@
 using System;
+using MuLike.Bootstrap;
 using MuLike.Core;
+using MuLike.Gameplay.Entities;
+using MuLike.Networking;
 using MuLike.Systems;
 using UnityEngine;
+using System.Threading;
 
 namespace MuLike.UI.Inventory
 {
@@ -20,7 +24,11 @@ namespace MuLike.UI.Inventory
         }
 
         [SerializeField] private InventoryView _view;
+        [SerializeField] private DropViewPool _dropPool;
+        [SerializeField] private Transform _playerTransform;
         [SerializeField] private bool _seedDemoDataOnAwake = true;
+        [SerializeField] private bool _autoPickupEnabledByDefault = false;
+        [SerializeField] private string _characterId = "char-local";
         [SerializeField] private DemoInventorySlotSeed[] _demoSlots =
         {
             new DemoInventorySlotSeed { SlotIndex = 0, ItemId = 1001, Quantity = 3, MaxStack = 20 },
@@ -29,11 +37,37 @@ namespace MuLike.UI.Inventory
         };
 
         private InventoryPresenter _presenter;
+        private InventoryEquipmentService _inventoryService;
+        private LootPickupSystem _lootPickupSystem;
+        private CancellationTokenSource _lifetimeCts;
+        private float _nextAutoPickupAt;
+
+        /// <summary>
+        /// Runtime override entrypoint for character-bound inventory sessions.
+        /// </summary>
+        public void SetCharacterIdRuntime(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId))
+                return;
+
+            _characterId = characterId.Trim();
+            _inventoryService?.SetCharacterId(_characterId);
+        }
 
         private void Awake()
         {
+            IClientSessionState session = ClientBootstrap.Instance != null
+                ? ClientBootstrap.Instance.Services.ResolveOrNull<IClientSessionState>()
+                : null;
+
+            if (session != null && session.SelectedCharacterId > 0)
+                _characterId = session.SelectedCharacterId.ToString();
+
             if (_view == null)
-                _view = FindObjectOfType<InventoryView>();
+                _view = FindAnyObjectByType<InventoryView>();
+
+            if (_dropPool == null)
+                _dropPool = FindAnyObjectByType<DropViewPool>();
 
             if (_view == null)
             {
@@ -43,20 +77,90 @@ namespace MuLike.UI.Inventory
             }
 
             InventoryClientSystem inventorySystem = ResolveOrCreateInventorySystem();
+            EquipmentClientSystem equipmentSystem = ResolveOrCreateEquipmentSystem();
             if (_seedDemoDataOnAwake)
                 SeedDemoInventory(inventorySystem);
 
-            _presenter = new InventoryPresenter(_view, inventorySystem, GameContext.CatalogResolver);
+            var transport = new MockInventoryEquipmentTransport(inventorySystem, equipmentSystem);
+            _inventoryService = new InventoryEquipmentService(
+                inventorySystem,
+                equipmentSystem,
+                ResolveOrCreateStatsSystem(),
+                GameContext.CatalogResolver,
+                transport);
+
+            _inventoryService.SetCharacterId(_characterId);
+
+            if (_dropPool == null)
+            {
+                var poolGo = new GameObject("DropViewPool");
+                _dropPool = poolGo.AddComponent<DropViewPool>();
+            }
+
+            _lootPickupSystem = new LootPickupSystem(_inventoryService, _dropPool)
+            {
+                AutoPickupEnabled = _autoPickupEnabledByDefault,
+                AutoPickupRadius = 3.2f
+            };
+
+            _inventoryService.WorldDropsUpdated += _lootPickupSystem.ApplyWorldDrops;
+
+            _presenter = new InventoryPresenter(
+                _view,
+                _inventoryService,
+                _lootPickupSystem,
+                inventorySystem,
+                equipmentSystem,
+                GameContext.CatalogResolver);
+
+            _lifetimeCts = new CancellationTokenSource();
+            _ = _inventoryService.RefreshSnapshotAsync(_lifetimeCts.Token);
         }
 
         private void OnEnable()
         {
             _presenter?.Bind();
+            if (_view != null)
+                _view.SetVisible(false);
         }
 
         private void OnDisable()
         {
             _presenter?.Unbind();
+
+            if (_lifetimeCts != null && !_lifetimeCts.IsCancellationRequested)
+                _lifetimeCts.Cancel();
+        }
+
+        private void OnDestroy()
+        {
+            if (_inventoryService != null && _lootPickupSystem != null)
+                _inventoryService.WorldDropsUpdated -= _lootPickupSystem.ApplyWorldDrops;
+
+            if (_lifetimeCts != null)
+            {
+                _lifetimeCts.Cancel();
+                _lifetimeCts.Dispose();
+                _lifetimeCts = null;
+            }
+        }
+
+        private async void Update()
+        {
+            if (_lootPickupSystem == null || _playerTransform == null)
+                return;
+
+            if (Time.time < _nextAutoPickupAt)
+                return;
+
+            _nextAutoPickupAt = Time.time + 0.25f;
+            try
+            {
+                await _lootPickupSystem.TryAutoPickupAsync(_playerTransform, _lifetimeCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         private static InventoryClientSystem ResolveOrCreateInventorySystem()
@@ -67,6 +171,26 @@ namespace MuLike.UI.Inventory
             inventory = new InventoryClientSystem(catalogResolver: GameContext.CatalogResolver);
             GameContext.RegisterSystem(inventory);
             return inventory;
+        }
+
+        private static EquipmentClientSystem ResolveOrCreateEquipmentSystem()
+        {
+            if (GameContext.TryGetSystem(out EquipmentClientSystem equipment))
+                return equipment;
+
+            equipment = new EquipmentClientSystem(GameContext.CatalogResolver);
+            GameContext.RegisterSystem(equipment);
+            return equipment;
+        }
+
+        private static StatsClientSystem ResolveOrCreateStatsSystem()
+        {
+            if (GameContext.TryGetSystem(out StatsClientSystem stats))
+                return stats;
+
+            stats = new StatsClientSystem();
+            GameContext.RegisterSystem(stats);
+            return stats;
         }
 
         private void SeedDemoInventory(InventoryClientSystem inventorySystem)

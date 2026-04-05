@@ -56,6 +56,16 @@ namespace MuLike.Systems
             public List<EquipmentSlotSnapshot> slots = new();
         }
 
+        [Serializable]
+        public struct EquipmentDelta
+        {
+            public bool HasUpsertSlot;
+            public EquipmentSlotSnapshot UpsertSlot;
+
+            public bool HasRemoveSlot;
+            public string RemoveSlot;
+        }
+
         public struct EquippedItemDescriptor
         {
             public int ItemId;
@@ -188,6 +198,19 @@ namespace MuLike.Systems
             return true;
         }
 
+        public bool TryEquip(
+            EquipSlot slot,
+            EquippedItemDescriptor item,
+            StatsClientSystem.CharacterClass characterClass,
+            int characterLevel,
+            out string error)
+        {
+            if (!ValidateEquipForCharacter(slot, item, characterClass, characterLevel, out error))
+                return false;
+
+            return TryEquip(slot, item, out error);
+        }
+
         public void SetEquipped(EquipSlot slot, int itemId)
         {
             EquippedItemDescriptor item = BuildDescriptor(itemId);
@@ -280,6 +303,43 @@ namespace MuLike.Systems
         public void ApplySnapshot(EquipmentSnapshot snapshot)
         {
             ApplySnapshot(snapshot != null ? snapshot.slots : null);
+        }
+
+        public void ApplyDelta(EquipmentDelta delta)
+        {
+            if (delta.HasUpsertSlot)
+            {
+                if (Enum.TryParse(delta.UpsertSlot.slot, true, out EquipSlot slot))
+                {
+                    EquippedItemDescriptor item = EquippedItemDescriptor.FromSnapshot(delta.UpsertSlot);
+                    if (ValidateEquip(slot, item, out _))
+                    {
+                        EquipmentSlotState previous = GetState(slot);
+                        EquipmentSlotState current = new EquipmentSlotState
+                        {
+                            Slot = slot,
+                            Item = item
+                        };
+
+                        if (current.IsEmpty)
+                            _equippedBySlot.Remove(slot);
+                        else
+                            _equippedBySlot[slot] = current;
+
+                        RaiseChangeEvents(slot, previous, current);
+                    }
+                }
+            }
+
+            if (delta.HasRemoveSlot && Enum.TryParse(delta.RemoveSlot, true, out EquipSlot removeSlot))
+            {
+                EquipmentSlotState previous = GetState(removeSlot);
+                if (previous.IsEmpty)
+                    return;
+
+                _equippedBySlot.Remove(removeSlot);
+                RaiseChangeEvents(removeSlot, previous, EmptyState(removeSlot));
+            }
         }
 
         public EquipmentSnapshot CreateSnapshot()
@@ -382,6 +442,66 @@ namespace MuLike.Systems
             }
 
             return true;
+        }
+
+        private bool ValidateEquipForCharacter(
+            EquipSlot slot,
+            EquippedItemDescriptor item,
+            StatsClientSystem.CharacterClass characterClass,
+            int characterLevel,
+            out string error)
+        {
+            error = string.Empty;
+
+            if (!ValidateEquip(slot, item, out error))
+                return false;
+
+            if (_catalogResolver == null || item.ItemId <= 0)
+                return true;
+
+            if (!_catalogResolver.TryGetItemDefinition(item.ItemId, out ItemDefinition definition) || definition == null)
+                return true;
+
+            int safeLevel = Math.Max(1, characterLevel);
+            if (safeLevel < Math.Max(0, definition.RequiredLevel))
+            {
+                error = $"Item {item.ItemId} requires level {definition.RequiredLevel}.";
+                return false;
+            }
+
+            if (definition.AllowedClasses == null || definition.AllowedClasses.Count == 0)
+                return true;
+
+            bool hasAny = definition.AllowedClasses.Contains(CharacterClassRestriction.Any);
+            if (hasAny)
+                return true;
+
+            if (!MatchesClass(definition.AllowedClasses, characterClass))
+            {
+                error = $"Item {item.ItemId} cannot be equipped by class {characterClass}.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool MatchesClass(IReadOnlyList<CharacterClassRestriction> allowed, StatsClientSystem.CharacterClass cls)
+        {
+            for (int i = 0; i < allowed.Count; i++)
+            {
+                CharacterClassRestriction entry = allowed[i];
+                switch (entry)
+                {
+                    case CharacterClassRestriction.Warrior when cls == StatsClientSystem.CharacterClass.DarkKnight:
+                    case CharacterClassRestriction.Mage when cls == StatsClientSystem.CharacterClass.DarkWizard:
+                    case CharacterClassRestriction.Ranger when cls == StatsClientSystem.CharacterClass.FairyElf:
+                    case CharacterClassRestriction.DarkLord when cls == StatsClientSystem.CharacterClass.DarkLord:
+                    case CharacterClassRestriction.Paladin when cls == StatsClientSystem.CharacterClass.MagicGladiator:
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         private EquippedItemDescriptor BuildDescriptor(int itemId)

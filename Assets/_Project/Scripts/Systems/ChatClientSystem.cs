@@ -22,6 +22,7 @@ namespace MuLike.Systems
         public string LocalPlayerName { get; set; } = "Player";
         public int BufferLimit => _bufferLimit;
         public IReadOnlyList<ChatMessage> Messages => _messages;
+        public bool HasTransport => _transport != null;
 
         public event Action<ChatMessage> OnMessageReceived;
 

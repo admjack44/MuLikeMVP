@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MuLike.Networking
@@ -13,8 +14,12 @@ namespace MuLike.Networking
 
         private bool _isAwaitingLoginResponse;
         private bool _isAwaitingRefreshResponse;
+        private CancellationTokenSource _loginTimeoutCts;
+        private CancellationTokenSource _refreshTimeoutCts;
         private string _username;
         private string _password;
+
+        public int RequestTimeoutMs { get; set; } = 12_000;
 
         public AuthClientService(IGameConnection connection, NetworkEventStream eventStream)
         {
@@ -57,6 +62,7 @@ namespace MuLike.Networking
 
             byte[] packet = ClientMessageFactory.CreateLoginRequest(_username, _password);
             _isAwaitingLoginResponse = true;
+            ArmLoginTimeout();
             await _connection.SendAsync(packet);
         }
 
@@ -79,6 +85,7 @@ namespace MuLike.Networking
 
             byte[] packet = ClientMessageFactory.CreateRefreshTokenRequest(RefreshToken);
             _isAwaitingRefreshResponse = true;
+            ArmRefreshTimeout();
             await _connection.SendAsync(packet);
         }
 
@@ -101,12 +108,54 @@ namespace MuLike.Networking
             AccessTokenExpiresAtUtc = DateTime.MinValue;
             _isAwaitingLoginResponse = false;
             _isAwaitingRefreshResponse = false;
+            CancelLoginTimeout();
+            CancelRefreshTimeout();
+        }
+
+        public AuthSessionSnapshot CaptureSession()
+        {
+            return new AuthSessionSnapshot
+            {
+                AccessToken = AccessToken ?? string.Empty,
+                AccessTokenExpiresAtUtcTicks = AccessTokenExpiresAtUtc.Ticks,
+                RefreshToken = RefreshToken ?? string.Empty,
+                RefreshTokenExpiresAtUtcTicks = RefreshTokenExpiresAtUtc.Ticks
+            };
+        }
+
+        public void RestoreSession(AuthSessionSnapshot snapshot)
+        {
+            AccessToken = snapshot.AccessToken ?? string.Empty;
+            AccessTokenExpiresAtUtc = snapshot.AccessTokenExpiresAtUtcTicks > 0
+                ? new DateTime(snapshot.AccessTokenExpiresAtUtcTicks, DateTimeKind.Utc)
+                : DateTime.MinValue;
+
+            RefreshToken = snapshot.RefreshToken ?? string.Empty;
+            RefreshTokenExpiresAtUtc = snapshot.RefreshTokenExpiresAtUtcTicks > 0
+                ? new DateTime(snapshot.RefreshTokenExpiresAtUtcTicks, DateTimeKind.Utc)
+                : DateTime.MinValue;
+
+            IsAuthenticated = HasValidAccessToken;
+        }
+
+        public void ClearSession()
+        {
+            IsAuthenticated = false;
+            AccessToken = null;
+            AccessTokenExpiresAtUtc = DateTime.MinValue;
+            RefreshToken = null;
+            RefreshTokenExpiresAtUtc = DateTime.MinValue;
+            _isAwaitingLoginResponse = false;
+            _isAwaitingRefreshResponse = false;
+            CancelLoginTimeout();
+            CancelRefreshTimeout();
         }
 
         private void HandleLoginResponse(bool success, MuLike.Shared.Protocol.PacketContracts.TokenBundle tokens, string message)
         {
             ApplyTokenBundle(success, tokens);
             _isAwaitingLoginResponse = false;
+            CancelLoginTimeout();
             LoginResultReceived?.Invoke(success, message);
         }
 
@@ -114,6 +163,7 @@ namespace MuLike.Networking
         {
             ApplyTokenBundle(success, tokens);
             _isAwaitingRefreshResponse = false;
+            CancelRefreshTimeout();
             RefreshResultReceived?.Invoke(success, message);
         }
 
@@ -144,14 +194,86 @@ namespace MuLike.Networking
             if (_isAwaitingLoginResponse)
             {
                 _isAwaitingLoginResponse = false;
+                CancelLoginTimeout();
                 LoginResultReceived?.Invoke(false, message);
             }
 
             if (_isAwaitingRefreshResponse)
             {
                 _isAwaitingRefreshResponse = false;
+                CancelRefreshTimeout();
                 RefreshResultReceived?.Invoke(false, message);
             }
+        }
+
+        private void ArmLoginTimeout()
+        {
+            CancelLoginTimeout();
+            _loginTimeoutCts = new CancellationTokenSource();
+            _ = MonitorLoginTimeoutAsync(_loginTimeoutCts.Token);
+        }
+
+        private void ArmRefreshTimeout()
+        {
+            CancelRefreshTimeout();
+            _refreshTimeoutCts = new CancellationTokenSource();
+            _ = MonitorRefreshTimeoutAsync(_refreshTimeoutCts.Token);
+        }
+
+        private async Task MonitorLoginTimeoutAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(Math.Max(1000, RequestTimeoutMs), token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (!_isAwaitingLoginResponse)
+                return;
+
+            _isAwaitingLoginResponse = false;
+            LoginResultReceived?.Invoke(false, "Login request timeout.");
+        }
+
+        private async Task MonitorRefreshTimeoutAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(Math.Max(1000, RequestTimeoutMs), token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (!_isAwaitingRefreshResponse)
+                return;
+
+            _isAwaitingRefreshResponse = false;
+            RefreshResultReceived?.Invoke(false, "Refresh request timeout.");
+        }
+
+        private void CancelLoginTimeout()
+        {
+            if (_loginTimeoutCts == null)
+                return;
+
+            _loginTimeoutCts.Cancel();
+            _loginTimeoutCts.Dispose();
+            _loginTimeoutCts = null;
+        }
+
+        private void CancelRefreshTimeout()
+        {
+            if (_refreshTimeoutCts == null)
+                return;
+
+            _refreshTimeoutCts.Cancel();
+            _refreshTimeoutCts.Dispose();
+            _refreshTimeoutCts = null;
         }
     }
 }

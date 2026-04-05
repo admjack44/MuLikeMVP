@@ -9,7 +9,7 @@ namespace MuLike.UI.Inventory
     /// <summary>
     /// Inventory slot visual and drag/drop event surface.
     /// </summary>
-    public class InventorySlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
+    public class InventorySlotView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, IPointerClickHandler
     {
         [SerializeField] private Image _iconImage;
         [SerializeField] private TMP_Text _itemNameText;
@@ -22,6 +22,7 @@ namespace MuLike.UI.Inventory
         public int SlotIndex { get; private set; }
 
         public event Action<int, int> DropRequested;
+        public event Action<int> SlotTapped;
 
         public void Bind(InventorySlotViewData data)
         {
@@ -83,6 +84,11 @@ namespace MuLike.UI.Inventory
                 return;
 
             DropRequested?.Invoke(source.SlotIndex, SlotIndex);
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            SlotTapped?.Invoke(SlotIndex);
         }
     }
 }

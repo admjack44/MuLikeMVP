@@ -30,10 +30,9 @@ namespace MuLike.Server.Game.Snapshots
                     Entities = entities
                 };
 
-            IReadOnlyList<Entity> allEntities = map.GetAllEntities();
-            for (int i = 0; i < allEntities.Count; i++)
+            IReadOnlyCollection<Entity> allEntities = map.GetEntities();
+            foreach (Entity entity in allEntities)
             {
-                Entity entity = allEntities[i];
                 if (entity.Id == observerEntityId)
                     continue;
 
@@ -58,7 +57,6 @@ namespace MuLike.Server.Game.Snapshots
             int mapId = 1)
         {
             var entities = new List<SnapshotEntityData>();
-            var currentEntities = new HashSet<int>();
 
             if (!_worldManager.TryGetMap(mapId, out MapInstance map))
                 return new SnapshotData
@@ -68,15 +66,13 @@ namespace MuLike.Server.Game.Snapshots
                     Entities = entities
                 };
 
-            IReadOnlyList<Entity> allEntities = map.GetAllEntities();
-            for (int i = 0; i < allEntities.Count; i++)
+            IReadOnlyCollection<Entity> allEntities = map.GetEntities();
+            foreach (Entity entity in allEntities)
             {
-                Entity entity = allEntities[i];
                 if (entity.Id == observerEntityId)
                     continue;
 
                 bool inView = _aoi.IsInView(observerEntityId, entity);
-                currentEntities.Add(entity.Id);
 
                 if (!inView)
                 {

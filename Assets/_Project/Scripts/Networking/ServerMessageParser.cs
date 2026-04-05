@@ -78,6 +78,11 @@ namespace MuLike.Networking
             return PacketContracts.TryReadRespawnNotification(payload, out entityId, out x, out y, out z);
         }
 
+        public static bool TryParseSnapshotData(byte[] payload, out SnapshotData snapshot)
+        {
+            return PacketContracts.TryReadSnapshotData(payload, out snapshot);
+        }
+
         public static bool TryParseErrorResponse(byte[] payload, out ProtocolError error, out uint requestId)
         {
             return PacketContracts.TryReadErrorResponse(payload, out error, out requestId);

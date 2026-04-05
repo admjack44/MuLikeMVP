@@ -10,6 +10,7 @@ namespace MuLike.UI.Chat
     {
         private readonly ChatView _view;
         private readonly ChatClientSystem _chatSystem;
+        private ChatFilterMode _activeFilter = ChatFilterMode.World;
 
         public ChatPresenter(ChatView view, ChatClientSystem chatSystem)
         {
@@ -21,10 +22,11 @@ namespace MuLike.UI.Chat
         {
             _view.SendRequested += HandleSendRequested;
             _view.ClearRequested += HandleClearRequested;
+            _view.FilterChanged += HandleFilterChanged;
             _chatSystem.OnMessageReceived += HandleMessageReceived;
 
             _view.SetInteractable(true);
-            _view.Render(_chatSystem.Messages);
+            RenderFiltered();
             _view.SetStatus("Chat connected.");
         }
 
@@ -32,6 +34,7 @@ namespace MuLike.UI.Chat
         {
             _view.SendRequested -= HandleSendRequested;
             _view.ClearRequested -= HandleClearRequested;
+            _view.FilterChanged -= HandleFilterChanged;
             _chatSystem.OnMessageReceived -= HandleMessageReceived;
         }
 
@@ -57,13 +60,47 @@ namespace MuLike.UI.Chat
         private void HandleClearRequested()
         {
             _chatSystem.Clear();
-            _view.Render(_chatSystem.Messages);
+            RenderFiltered();
             _view.SetStatus("Chat buffer cleared.");
         }
 
         private void HandleMessageReceived(ChatMessage _)
         {
-            _view.Render(_chatSystem.Messages);
+            RenderFiltered();
+        }
+
+        private void HandleFilterChanged(ChatFilterMode filter)
+        {
+            _activeFilter = filter;
+            RenderFiltered();
+        }
+
+        private void RenderFiltered()
+        {
+            var filtered = new System.Collections.Generic.List<ChatMessage>(_chatSystem.Messages.Count);
+            for (int i = 0; i < _chatSystem.Messages.Count; i++)
+            {
+                ChatMessage message = _chatSystem.Messages[i];
+                if (IsMessageVisible(message.Channel))
+                    filtered.Add(message);
+            }
+
+            _view.Render(filtered);
+        }
+
+        private bool IsMessageVisible(ChatChannel channel)
+        {
+            if (_activeFilter == ChatFilterMode.All)
+                return true;
+
+            return _activeFilter switch
+            {
+                ChatFilterMode.World => channel == ChatChannel.World || channel == ChatChannel.General,
+                ChatFilterMode.Party => channel == ChatChannel.Party,
+                ChatFilterMode.Guild => channel == ChatChannel.Guild,
+                ChatFilterMode.System => channel == ChatChannel.System,
+                _ => true
+            };
         }
     }
 }

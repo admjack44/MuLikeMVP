@@ -1,4 +1,5 @@
 using MuLike.Networking;
+using MuLike.Performance.Rendering;
 using UnityEngine;
 
 namespace MuLike.Gameplay.Entities
@@ -29,6 +30,7 @@ namespace MuLike.Gameplay.Entities
 
             Transform parent = _spawnRoot != null ? _spawnRoot : transform;
             EntityView instance = Instantiate(prefab, snapshot.Position, Quaternion.Euler(0f, snapshot.RotationY, 0f), parent);
+            EnsurePerformanceComponents(instance.gameObject, snapshot.Type);
             instance.Initialize(snapshot.EntityId);
             return instance;
         }
@@ -49,6 +51,21 @@ namespace MuLike.Gameplay.Entities
                 SnapshotApplier.EntityType.Drop => _dropPrefab != null ? _dropPrefab : _fallbackPrefab,
                 _ => _fallbackPrefab
             };
+        }
+
+        private static void EnsurePerformanceComponents(GameObject entityObject, SnapshotApplier.EntityType entityType)
+        {
+            if (entityObject == null)
+                return;
+
+            if (entityObject.GetComponent<DistanceCullingController>() == null)
+                entityObject.AddComponent<DistanceCullingController>();
+
+            if (entityType == SnapshotApplier.EntityType.Monster || entityType == SnapshotApplier.EntityType.RemotePlayer)
+            {
+                if (entityObject.GetComponent<DistanceLodController>() == null)
+                    entityObject.AddComponent<DistanceLodController>();
+            }
         }
     }
 }
