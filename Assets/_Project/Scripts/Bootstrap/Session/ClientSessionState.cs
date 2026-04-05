@@ -22,7 +22,7 @@ namespace MuLike.Bootstrap
     /// <summary>
     /// Lightweight runtime-only session state for scene flow wiring and system binding.
     /// </summary>
-    public sealed class ClientSessionState : IClientSessionState
+    public sealed class RuntimeClientSessionState : IClientSessionState
     {
         public bool IsAuthenticated { get; private set; }
         public int SelectedCharacterId { get; private set; }

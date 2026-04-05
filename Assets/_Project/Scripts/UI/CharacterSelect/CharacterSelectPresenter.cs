@@ -137,12 +137,12 @@ namespace MuLike.UI.CharacterSelect
         private void HandleCharacterSelected(int characterId)
         {
             _selectedCharacterId = characterId;
-            _view.RenderCharacters(_characters, _selectedCharacterId);
+            _view.RenderCharacters(BuildViewData(_characters), _selectedCharacterId);
             _view.SetActionAvailability(_selectedCharacterId > 0);
 
             CharacterSummaryDto selected = FindCharacter(_selectedCharacterId);
             string name = selected != null ? selected.name : "Unknown";
-            _view.SetSelectedCharacterDetails(selected);
+            _view.SetSelectedCharacterDetails(ToViewData(selected));
             _view.SetStatus($"Selected: {name}");
         }
 

@@ -3,9 +3,10 @@ namespace MuLike.UI.Chat
     public enum ChatFilterMode
     {
         World = 0,
-        Party = 1,
-        Guild = 2,
-        System = 3,
-        All = 4
+        Trade = 1,
+        Party = 2,
+        Guild = 3,
+        System = 4,
+        All = 5
     }
 }

@@ -1,6 +1,7 @@
 using MuLike.Gameplay.Combat;
 using MuLike.Gameplay.Controllers;
 using MuLike.Networking;
+using MuLike.Optimization;
 using MuLike.Performance.Rendering;
 using MuLike.UI.Inventory;
 using MuLike.UI.MobileHUD;
@@ -18,6 +19,8 @@ namespace MuLike.Bootstrap
         [SerializeField] private bool _logSummary = true;
         [SerializeField] private bool _ensureMobileCameraCulling = true;
         [SerializeField] private bool _ensureMobileUrpQuality = true;
+        [SerializeField] private bool _ensureMobileOptimizationStack = true;
+        [SerializeField] private bool _ensureMobileOptimizationDebugOverlay = true;
 
         private void Start()
         {
@@ -42,6 +45,12 @@ namespace MuLike.Bootstrap
             Camera mainCamera = Camera.main;
             MobileCameraCullingConfigurator cullingConfigurator = mainCamera != null ? mainCamera.GetComponent<MobileCameraCullingConfigurator>() : null;
             MobileUrpQualityApplier qualityApplier = FindAnyObjectByType<MobileUrpQualityApplier>();
+            QualityManager qualityManager = FindAnyObjectByType<QualityManager>();
+            MemoryManager memoryManager = FindAnyObjectByType<MemoryManager>();
+            BatterySaver batterySaver = FindAnyObjectByType<BatterySaver>();
+            MobileNetworkOptimizer networkOptimizer = FindAnyObjectByType<MobileNetworkOptimizer>();
+            MobileQaProfileApplier qaProfileApplier = FindAnyObjectByType<MobileQaProfileApplier>();
+            MobileOptimizationDebugOverlay debugOverlay = FindAnyObjectByType<MobileOptimizationDebugOverlay>();
             IClientSessionState sessionState = ClientBootstrap.Instance != null
                 ? ClientBootstrap.Instance.Services.ResolveOrNull<IClientSessionState>()
                 : null;
@@ -85,6 +94,26 @@ namespace MuLike.Bootstrap
             if (_ensureMobileUrpQuality && qualityApplier == null)
                 qualityApplier = gameObject.AddComponent<MobileUrpQualityApplier>();
 
+            if (_ensureMobileOptimizationStack)
+            {
+                GameObject optimizationRoot = FindAnyObjectByType<QualityManager>() != null
+                    ? FindAnyObjectByType<QualityManager>().gameObject
+                    : new GameObject("MobileOptimizationStack");
+
+                if (qualityManager == null)
+                    qualityManager = optimizationRoot.AddComponent<QualityManager>();
+                if (memoryManager == null)
+                    memoryManager = optimizationRoot.AddComponent<MemoryManager>();
+                if (batterySaver == null)
+                    batterySaver = optimizationRoot.AddComponent<BatterySaver>();
+                if (networkOptimizer == null)
+                    networkOptimizer = optimizationRoot.AddComponent<MobileNetworkOptimizer>();
+                if (qaProfileApplier == null)
+                    qaProfileApplier = optimizationRoot.AddComponent<MobileQaProfileApplier>();
+                if (_ensureMobileOptimizationDebugOverlay && debugOverlay == null)
+                    debugOverlay = optimizationRoot.AddComponent<MobileOptimizationDebugOverlay>();
+            }
+
             if (_logSummary)
             {
                 Debug.Log(
@@ -97,7 +126,13 @@ namespace MuLike.Bootstrap
                     + $" HUD={(hud != null)}"
                     + $" Inventory={(inventory != null)}"
                     + $" CameraCulling={(cullingConfigurator != null)}"
-                    + $" UrpQuality={(qualityApplier != null)}");
+                    + $" UrpQuality={(qualityApplier != null)}"
+                    + $" QualityManager={(qualityManager != null)}"
+                    + $" MemoryManager={(memoryManager != null)}"
+                    + $" BatterySaver={(batterySaver != null)}"
+                    + $" NetworkOptimizer={(networkOptimizer != null)}"
+                    + $" QaProfileApplier={(qaProfileApplier != null)}"
+                    + $" DebugOverlay={(debugOverlay != null)}");
             }
         }
     }

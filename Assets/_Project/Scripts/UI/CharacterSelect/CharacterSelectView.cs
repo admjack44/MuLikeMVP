@@ -98,7 +98,7 @@ namespace MuLike.UI.CharacterSelect
             SetActionAvailability(false);
             UpdateOrientationLayout();
             SetLoading(false, false);
-            SetSelectedCharacterDetails(null);
+            SetSelectedCharacterDetails((CharacterSummaryViewData?)null);
         }
 
         private void OnDestroy()

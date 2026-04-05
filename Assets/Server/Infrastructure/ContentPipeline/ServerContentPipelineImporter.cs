@@ -4,6 +4,7 @@ using MuLike.Server.Game.Definitions;
 using MuLike.Server.Game.Skills;
 using MuLike.Server.Game.World;
 using MuLike.Shared.Content;
+using ServerSkillDefinition = MuLike.Server.Game.Skills.SkillDefinition;
 
 namespace MuLike.Server.Infrastructure.ContentPipeline
 {
@@ -109,7 +110,7 @@ namespace MuLike.Server.Infrastructure.ContentPipeline
 
         private static void ApplySkills(SkillDatabase skillDatabase, ContentSkillDto[] skills)
         {
-            var list = new List<SkillDefinition>();
+            var list = new List<ServerSkillDefinition>();
             if (skills != null)
             {
                 for (int i = 0; i < skills.Length; i++)
@@ -118,7 +119,7 @@ namespace MuLike.Server.Infrastructure.ContentPipeline
                     if (source == null)
                         continue;
 
-                    var def = new SkillDefinition(
+                    var def = new ServerSkillDefinition(
                         source.skillId,
                         source.name,
                         source.description,

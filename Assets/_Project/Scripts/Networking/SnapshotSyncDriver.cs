@@ -68,7 +68,7 @@ namespace MuLike.Networking
 
         private void Update()
         {
-            if (Input.GetKeyDown(_toggleOverlayKey))
+            if (UnityEngine.Input.GetKeyDown(_toggleOverlayKey))
                 _showDebugOverlay = !_showDebugOverlay;
 
             _snapshotApplier?.TickVisuals(Time.deltaTime);

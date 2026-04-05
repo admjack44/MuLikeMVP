@@ -116,6 +116,7 @@ namespace MuLike.Networking
         public long DroppedQueuedCommands => _queuedConnection != null ? _queuedConnection.DroppedCommands : 0;
         public bool IsInBackground => _isInBackground;
         public bool IsConnecting => _isConnecting;
+        public PacketRouter PacketRouter => _packetRouter;
         public event Action<string> OnClientLog;
         public event Action<bool, string> OnLoginResult;
         public event Action<bool, string> OnRefreshResult;
@@ -312,6 +313,15 @@ namespace MuLike.Networking
         {
             EnsureNetworkInitialized();
             await _skillService.CastAsync(skillId, targetId);
+        }
+
+        public async Task SendRawPacketAsync(byte[] packet)
+        {
+            EnsureNetworkInitialized();
+            if (packet == null || packet.Length == 0 || _queuedConnection == null)
+                return;
+
+            await _queuedConnection.SendAsync(packet);
         }
 
         public async Task SendRefreshAsync()

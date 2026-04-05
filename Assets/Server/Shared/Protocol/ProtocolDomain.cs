@@ -8,6 +8,7 @@ namespace MuLike.Shared.Protocol
         World = 3,
         Combat = 4,
         Skill = 5,
-        System = 6
+        System = 6,
+        Economy = 7
     }
 }

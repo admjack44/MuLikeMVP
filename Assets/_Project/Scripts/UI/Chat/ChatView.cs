@@ -32,6 +32,7 @@ namespace MuLike.UI.Chat
 
         [Header("Filters")]
         [SerializeField] private Button _worldFilterButton;
+        [SerializeField] private Button _tradeFilterButton;
         [SerializeField] private Button _partyFilterButton;
         [SerializeField] private Button _guildFilterButton;
         [SerializeField] private Button _systemFilterButton;
@@ -46,6 +47,7 @@ namespace MuLike.UI.Chat
         private static readonly ChatChannel[] SendChannels =
         {
             ChatChannel.World,
+            ChatChannel.Trade,
             ChatChannel.Party,
             ChatChannel.Guild,
             ChatChannel.Private
@@ -66,6 +68,9 @@ namespace MuLike.UI.Chat
 
             if (_worldFilterButton != null)
                 _worldFilterButton.onClick.AddListener(() => SetFilter(ChatFilterMode.World));
+
+            if (_tradeFilterButton != null)
+                _tradeFilterButton.onClick.AddListener(() => SetFilter(ChatFilterMode.Trade));
 
             if (_partyFilterButton != null)
                 _partyFilterButton.onClick.AddListener(() => SetFilter(ChatFilterMode.Party));
@@ -95,6 +100,9 @@ namespace MuLike.UI.Chat
 
             if (_worldFilterButton != null)
                 _worldFilterButton.onClick.RemoveAllListeners();
+
+            if (_tradeFilterButton != null)
+                _tradeFilterButton.onClick.RemoveAllListeners();
 
             if (_partyFilterButton != null)
                 _partyFilterButton.onClick.RemoveAllListeners();

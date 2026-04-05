@@ -50,6 +50,11 @@ namespace MuLike.Shared.Protocol
             [NetOpcodes.Skill.ListRequest] = new ProtocolOpcodeInfo(ProtocolDomain.Skill, ProtocolMessageKind.Request),
             [NetOpcodes.Skill.ListResponse] = new ProtocolOpcodeInfo(ProtocolDomain.Skill, ProtocolMessageKind.Response),
 
+            [NetOpcodes.Economy.TradeCommand] = new ProtocolOpcodeInfo(ProtocolDomain.Economy, ProtocolMessageKind.Request),
+            [NetOpcodes.Economy.TradeEvent] = new ProtocolOpcodeInfo(ProtocolDomain.Economy, ProtocolMessageKind.Event),
+            [NetOpcodes.Economy.AuctionCommand] = new ProtocolOpcodeInfo(ProtocolDomain.Economy, ProtocolMessageKind.Request),
+            [NetOpcodes.Economy.AuctionEvent] = new ProtocolOpcodeInfo(ProtocolDomain.Economy, ProtocolMessageKind.Event),
+
             [NetOpcodes.System.ErrorResponse] = new ProtocolOpcodeInfo(ProtocolDomain.System, ProtocolMessageKind.Response)
         };
 

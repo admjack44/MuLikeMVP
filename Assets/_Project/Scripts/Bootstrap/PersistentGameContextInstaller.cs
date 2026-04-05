@@ -108,7 +108,7 @@ namespace MuLike.Bootstrap
             EquipmentClientSystem equipment = ResolveOrCreateEquipment();
             ConsumableClientSystem consumable = ResolveOrCreateConsumable(inventory, stats);
             PetClientSystem pets = ResolveOrCreatePet();
-            IClientSessionState sessionState = new ClientSessionState();
+            IClientSessionState sessionState = new RuntimeClientSessionState();
 
             registry.Register(stats);
             registry.Register(inventory);

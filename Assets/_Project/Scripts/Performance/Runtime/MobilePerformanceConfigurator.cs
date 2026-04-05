@@ -77,10 +77,10 @@ namespace MuLike.Performance.Runtime
 
             QualitySettings.lodBias = Mathf.Max(0.1f, _activeProfile.lodBias);
             QualitySettings.antiAliasing = Mathf.Clamp(_activeProfile.antiAliasing, 0, 4);
-            QualitySettings.masterTextureLimit = Mathf.Clamp(_activeProfile.masterTextureLimit, 0, 3);
+            QualitySettings.globalTextureMipmapLimit = Mathf.Clamp(_activeProfile.masterTextureLimit, 0, 3);
             QualitySettings.anisotropicFiltering = _activeProfile.anisotropicFiltering;
 
-            QualitySettings.shadows = _activeProfile.enableShadows ? _activeProfile.shadowQuality : ShadowQuality.Disable;
+            QualitySettings.shadows = _activeProfile.enableShadows ? _activeProfile.shadowQuality : UnityEngine.ShadowQuality.Disable;
             QualitySettings.shadowDistance = _activeProfile.enableShadows ? Mathf.Max(0f, _activeProfile.shadowDistance) : 0f;
             QualitySettings.shadowResolution = _activeProfile.shadowResolution;
 
@@ -154,8 +154,15 @@ namespace MuLike.Performance.Runtime
 
             urp.renderScale = Mathf.Clamp(profile.renderScale, 0.5f, 1f);
             urp.supportsHDR = profile.supportsHdr;
-            urp.supportsSoftParticles = profile.supportsSoftParticles;
-            urp.supportsCameraOpaqueTexture = profile.supportsOpaqueTexture;
+            TrySetUrpBoolProperty(urp, "supportsSoftParticles", profile.supportsSoftParticles);
+            TrySetUrpBoolProperty(urp, "supportsCameraOpaqueTexture", profile.supportsOpaqueTexture);
+        }
+
+        private static void TrySetUrpBoolProperty(UniversalRenderPipelineAsset urp, string propertyName, bool value)
+        {
+            var property = typeof(UniversalRenderPipelineAsset).GetProperty(propertyName);
+            if (property != null && property.PropertyType == typeof(bool) && property.CanWrite)
+                property.SetValue(urp, value, null);
         }
 
         private static void ApplyPostProcessState(bool enabled)

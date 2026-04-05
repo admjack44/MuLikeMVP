@@ -38,8 +38,8 @@ namespace MuLike.Performance.Rendering
             {
                 urp.renderScale = _profile.renderScale;
                 urp.supportsHDR = _profile.supportsHDR;
-                urp.supportsCameraOpaqueTexture = false;
-                urp.supportsSoftParticles = _profile.supportsSoftParticles;
+                TrySetUrpBoolProperty(urp, "supportsCameraOpaqueTexture", false);
+                TrySetUrpBoolProperty(urp, "supportsSoftParticles", _profile.supportsSoftParticles);
             }
             else
             {
@@ -47,6 +47,13 @@ namespace MuLike.Performance.Rendering
             }
 
             Debug.Log($"[MobileUrpQualityApplier] Applied profile '{_profile.name}' with target FPS {_profile.targetFrameRate}.");
+        }
+
+        private static void TrySetUrpBoolProperty(UniversalRenderPipelineAsset urp, string propertyName, bool value)
+        {
+            var property = typeof(UniversalRenderPipelineAsset).GetProperty(propertyName);
+            if (property != null && property.PropertyType == typeof(bool) && property.CanWrite)
+                property.SetValue(urp, value, null);
         }
     }
 }

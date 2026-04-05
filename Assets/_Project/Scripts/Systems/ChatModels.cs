@@ -9,7 +9,8 @@ namespace MuLike.Systems
         Party = 1,
         Guild = 2,
         System = 3,
-        Private = 4
+        Private = 4,
+        Trade = 5
     }
 
     [Serializable]
@@ -35,9 +36,10 @@ namespace MuLike.Systems
             return Channel switch
             {
                 ChatChannel.System => $"[{hhmm}] [System] {Text}",
-                ChatChannel.Private => $"[{hhmm}] [PM] {sender} -> {Target}: {Text}",
+                ChatChannel.Private => $"[{hhmm}] [Whisper] {sender} -> {Target}: {Text}",
                 ChatChannel.Party => $"[{hhmm}] [Party] [{sender}] {Text}",
                 ChatChannel.Guild => $"[{hhmm}] [Guild] [{sender}] {Text}",
+                ChatChannel.Trade => $"[{hhmm}] [Trade] [{sender}] {Text}",
                 _ => $"[{hhmm}] [World] [{sender}] {Text}"
             };
         }

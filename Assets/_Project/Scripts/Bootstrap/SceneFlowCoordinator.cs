@@ -111,7 +111,7 @@ namespace MuLike.Bootstrap
         {
             _ = PreloadLoginDependenciesAsync();
 
-            LoginView view = Object.FindObjectOfType<LoginView>();
+            LoginView view = UnityEngine.Object.FindObjectOfType<LoginView>();
             if (view == null)
             {
                 Debug.LogWarning("[SceneFlowCoordinator] LoginView not found. Login scene presenters were not wired.");
@@ -124,7 +124,7 @@ namespace MuLike.Bootstrap
                 return;
             }
 
-            LoginFlowController legacy = Object.FindObjectOfType<LoginFlowController>();
+            LoginFlowController legacy = UnityEngine.Object.FindObjectOfType<LoginFlowController>();
             if (legacy != null)
                 legacy.enabled = false;
 
@@ -144,14 +144,14 @@ namespace MuLike.Bootstrap
 
         private void ConfigureCharacterSelectScene()
         {
-            CharacterSelectView view = Object.FindObjectOfType<CharacterSelectView>();
+            CharacterSelectView view = UnityEngine.Object.FindObjectOfType<CharacterSelectView>();
             if (view == null)
             {
                 Debug.LogWarning("[SceneFlowCoordinator] CharacterSelectView not found. CharacterSelect presenters were not wired.");
                 return;
             }
 
-            CharacterSelectFlowController legacy = Object.FindObjectOfType<CharacterSelectFlowController>();
+            CharacterSelectFlowController legacy = UnityEngine.Object.FindObjectOfType<CharacterSelectFlowController>();
             if (legacy != null)
                 legacy.enabled = false;
 
@@ -198,8 +198,8 @@ namespace MuLike.Bootstrap
 
             EnsureWorldVerticalSliceInstaller();
 
-            HUDView hudView = Object.FindObjectOfType<HUDView>();
-            MobileHudController mobileHud = Object.FindObjectOfType<MobileHudController>();
+            HUDView hudView = UnityEngine.Object.FindObjectOfType<HUDView>();
+            MobileHudController mobileHud = UnityEngine.Object.FindObjectOfType<MobileHudController>();
             if (hudView == null)
             {
                 if (mobileHud != null)
@@ -215,7 +215,7 @@ namespace MuLike.Bootstrap
                 return;
             }
 
-            HUDFlowController legacy = Object.FindObjectOfType<HUDFlowController>();
+            HUDFlowController legacy = UnityEngine.Object.FindObjectOfType<HUDFlowController>();
             if (legacy != null)
                 legacy.enabled = false;
 
@@ -229,7 +229,7 @@ namespace MuLike.Bootstrap
             }
 
             _registry.TryResolve(out NetworkGameClient networkClient);
-            TargetingController targeting = Object.FindObjectOfType<TargetingController>();
+            TargetingController targeting = UnityEngine.Object.FindObjectOfType<TargetingController>();
 
             var dependencies = new HUDPresenter.Dependencies
             {
@@ -251,7 +251,7 @@ namespace MuLike.Bootstrap
 
         private static void EnsureWorldVerticalSliceInstaller()
         {
-            WorldVerticalSliceInstaller installer = Object.FindObjectOfType<WorldVerticalSliceInstaller>();
+            WorldVerticalSliceInstaller installer = UnityEngine.Object.FindObjectOfType<WorldVerticalSliceInstaller>();
             if (installer != null)
             {
                 installer.Install();

@@ -27,6 +27,10 @@ namespace MuLike.Gameplay.Controllers
         [SerializeField, Range(0f, 89f)] private float _maxPitch = 45f;
         [SerializeField] private float _pitchSensitivity = 0.5f;
 
+        [Header("Zoom")]
+        [SerializeField] private float _minFollowDistance = 2.5f;
+        [SerializeField] private float _maxFollowDistance = 14f;
+
         [Header("Auto Alignment")]
         [SerializeField] private bool _autoAlignToTarget = true;
         [SerializeField, Range(0f, 1f)] private float _autoAlignStrength = 0.08f;
@@ -49,6 +53,43 @@ namespace MuLike.Gameplay.Controllers
         private bool _isOrbiting;
 
         private Rect _orbitInputRect;
+
+        // ── Public API for MuTouchControls ────────────────────────────────────────
+
+        /// <summary>True while MuTouchControls is handling a two-finger gesture — suppresses internal single-finger orbit.</summary>
+        public bool IsOrbitOverridden { get; set; }
+
+        /// <summary>Clamps to the [_minFollowDistance, _maxFollowDistance] range configured in the Inspector.</summary>
+        public float FollowDistance
+        {
+            get => _followDistance;
+            set => _followDistance = Mathf.Clamp(value, _minFollowDistance, _maxFollowDistance);
+        }
+
+        public float MinFollowDistance => _minFollowDistance;
+        public float MaxFollowDistance => _maxFollowDistance;
+
+        /// <summary>Toggle auto-alignment to character forward ("Smart Camera").</summary>
+        public bool SmartCameraEnabled
+        {
+            get => _autoAlignToTarget;
+            set => _autoAlignToTarget = value;
+        }
+
+        /// <summary>Add yaw offset in degrees (positive = right). Used by two-finger drag gesture.</summary>
+        public void AddYawDelta(float degrees) => _targetYaw += degrees;
+
+        /// <summary>Add pitch offset in degrees (positive = down). Used by two-finger drag gesture.</summary>
+        public void AddPitchDelta(float degrees)
+        {
+            _targetPitch = Mathf.Clamp(_targetPitch + degrees, _minPitch, _maxPitch);
+        }
+
+        /// <summary>Snap current yaw to the nearest 45° increment after a two-finger gesture lifts.</summary>
+        public void SnapYawToNearest45()
+        {
+            _targetYaw = Mathf.Round(_targetYaw / 45f) * 45f;
+        }
 
         private void OnEnable()
         {
@@ -79,11 +120,18 @@ namespace MuLike.Gameplay.Controllers
 
         private void ProcessOrbitInput()
         {
+            // When MuTouchControls is handling a two-finger gesture it takes full orbit ownership.
+            if (IsOrbitOverridden)
+            {
+                _isOrbiting = false;
+                return;
+            }
+
             bool touchActive = false;
             Vector2 touchDelta = Vector2.zero;
 
 #if ENABLE_INPUT_SYSTEM
-            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.isPressed)
+            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed)
             {
                 Vector2 touchPos = Touchscreen.current.primaryTouch.position.ReadValue();
                 if (_orbitInputRect.Contains(touchPos))

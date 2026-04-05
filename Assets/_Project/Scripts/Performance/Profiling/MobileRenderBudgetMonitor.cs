@@ -63,10 +63,7 @@ namespace MuLike.Performance.Profiling
 
         private static ProfilerRecorder CreateRecorder(ProfilerCategory category, string statName)
         {
-            if (!ProfilerRecorderHandle.TryGet(category, statName, out ProfilerRecorderHandle handle))
-                return default;
-
-            return ProfilerRecorder.StartNew(handle);
+            return ProfilerRecorder.StartNew(category, statName);
         }
     }
 }

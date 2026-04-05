@@ -49,6 +49,14 @@ namespace MuLike.Shared.Protocol
             public const ushort ListResponse = 0x0203;
         }
 
+        public static class Economy
+        {
+            public const ushort TradeCommand = 0x0300;
+            public const ushort TradeEvent = 0x0301;
+            public const ushort AuctionCommand = 0x0310;
+            public const ushort AuctionEvent = 0x0311;
+        }
+
         public static class System
         {
             public const ushort ErrorResponse = 0x7FFF;
@@ -87,6 +95,11 @@ namespace MuLike.Shared.Protocol
         public const ushort SkillListResponse = Skill.ListResponse;
         public const ushort SkillCastRequest = Skill.CastRequest;
         public const ushort SkillCastResponse = Skill.CastResponse;
+
+        public const ushort TradeCommand = Economy.TradeCommand;
+        public const ushort TradeEvent = Economy.TradeEvent;
+        public const ushort AuctionCommand = Economy.AuctionCommand;
+        public const ushort AuctionEvent = Economy.AuctionEvent;
 
         public const ushort ErrorResponse = System.ErrorResponse;
     }

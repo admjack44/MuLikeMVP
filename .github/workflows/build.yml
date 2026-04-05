@@ -1,0 +1,185 @@
+name: Unity Mobile CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: unity-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.0.40f1
+
+jobs:
+  android-aab:
+    name: Android AAB Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-AAB-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Android-AAB-
+
+      - name: Build Android AAB
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: Android
+          unityVersion: ${{ env.UNITY_VERSION }}
+          buildMethod: MuLike.EditorTools.ProjectBuildPipeline.BuildAndroidAab
+
+      - name: Upload Android AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: |
+            Builds/Android/*.aab
+            Builds/Android/*symbols*.zip
+
+      - name: Upload to Google Play Internal Testing
+        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ secrets.ANDROID_PACKAGE_NAME }}
+          releaseFiles: Builds/Android/*.aab
+          track: internal
+          status: completed
+
+  android-apk-split:
+    name: Android Split APKs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - armv7
+          - arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-APK-${{ matrix.arch }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Android-APK-${{ matrix.arch }}-
+
+      - name: Build Split APK
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: Android
+          unityVersion: ${{ env.UNITY_VERSION }}
+          buildMethod: ${{ matrix.arch == 'armv7' && 'MuLike.EditorTools.ProjectBuildPipeline.BuildAndroidApkArmv7' || 'MuLike.EditorTools.ProjectBuildPipeline.BuildAndroidApkArm64' }}
+
+      - name: Upload Split APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ matrix.arch }}
+          path: |
+            Builds/Android/*${{ matrix.arch }}*.apk
+            Builds/Android/*symbols*.zip
+
+  ios-xcode:
+    name: iOS Xcode Project + TestFlight
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-iOS-
+
+      - name: Build iOS Xcode Project
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: iOS
+          unityVersion: ${{ env.UNITY_VERSION }}
+          buildMethod: MuLike.EditorTools.ProjectBuildPipeline.BuildIosXcodeProject
+
+      - name: Upload iOS Xcode Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcode-project
+          path: Builds/iOS/**
+
+      - name: Build IPA from Xcode Project
+        if: ${{ secrets.APPLE_TEAM_ID != '' && secrets.APPLE_SIGNING_CERT_BASE64 != '' && secrets.APPLE_PROVISIONING_PROFILE_BASE64 != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/certs ~/profiles
+          echo "$APPLE_SIGNING_CERT_BASE64" | base64 --decode > ~/certs/cert.p12
+          echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > ~/profiles/profile.mobileprovision
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import ~/certs/cert.p12 -k build.keychain -P "$APPLE_SIGNING_CERT_PASSWORD" -T /usr/bin/codesign
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ~/profiles/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          PROJECT_PATH=$(find Builds/iOS -name "*.xcodeproj" | head -n 1)
+          xcodebuild -project "$PROJECT_PATH" -scheme Unity-iPhone -configuration Release -archivePath Builds/iOS/App.xcarchive archive DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+          xcodebuild -exportArchive -archivePath Builds/iOS/App.xcarchive -exportOptionsPlist .github/workflows/ExportOptions.plist -exportPath Builds/iOS/export
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_SIGNING_CERT_BASE64: ${{ secrets.APPLE_SIGNING_CERT_BASE64 }}
+          APPLE_SIGNING_CERT_PASSWORD: ${{ secrets.APPLE_SIGNING_CERT_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+      - name: Upload to TestFlight
+        if: ${{ secrets.APPSTORE_API_KEY_ID != '' && secrets.APPSTORE_ISSUER_ID != '' && secrets.APPSTORE_API_PRIVATE_KEY != '' }}
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: Builds/iOS/export/*.ipa
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+
+  unity-cloud-build-alternative:
+    name: Unity Cloud Build Alternative
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notes
+        run: |
+          echo "Alternative enabled: Unity Cloud Build"
+          echo "1) Conecta el repo en Unity Dashboard > DevOps > Build Automation"
+          echo "2) Define target Android AAB + iOS"
+          echo "3) Usa los mismos métodos de build: MuLike.EditorTools.ProjectBuildPipeline.*"
