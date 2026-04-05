@@ -102,7 +102,8 @@ namespace MuLike.Networking
 
             if (!_routes.TryGetValue(opcode, out var handlers) || handlers == null || handlers.Count == 0)
             {
-                Debug.LogWarning($"[PacketRouter] No handler for opcode: {opcode}");
+                ProtocolOpcodeInfo info = ProtocolCatalog.GetInfo(opcode);
+                Debug.LogWarning($"[PacketRouter] No handler for opcode={opcode} domain={info.Domain} kind={info.Kind}");
                 return;
             }
 
@@ -110,7 +111,10 @@ namespace MuLike.Networking
             Action pipeline = BuildMiddlewarePipeline(opcode, payload, finalDispatch);
 
             if (EnableVerboseLogs)
-                Debug.Log($"[PacketRouter] Route opcode={opcode} payloadBytes={(payload != null ? payload.Length : 0)} handlers={handlers.Count}");
+            {
+                ProtocolOpcodeInfo info = ProtocolCatalog.GetInfo(opcode);
+                Debug.Log($"[PacketRouter] Route opcode={opcode} domain={info.Domain} kind={info.Kind} payloadBytes={(payload != null ? payload.Length : 0)} handlers={handlers.Count}");
+            }
 
             pipeline();
         }

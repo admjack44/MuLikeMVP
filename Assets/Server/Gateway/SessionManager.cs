@@ -22,6 +22,15 @@ namespace MuLike.Server.Gateway
             return _sessions.TryGetValue(sessionId, out connection);
         }
 
+        public bool TryMarkHeartbeat(Guid sessionId)
+        {
+            if (!_sessions.TryGetValue(sessionId, out ClientConnection connection))
+                return false;
+
+            connection.MarkHeartbeat();
+            return true;
+        }
+
         public bool TryRemove(Guid sessionId, out ClientConnection removed)
         {
             return _sessions.TryRemove(sessionId, out removed);
@@ -30,6 +39,17 @@ namespace MuLike.Server.Gateway
         public IReadOnlyCollection<ClientConnection> GetAll()
         {
             return _sessions.Values.ToArray();
+        }
+
+        public IReadOnlyList<Guid> GetExpiredSessionIds(TimeSpan timeout, DateTime nowUtc)
+        {
+            if (timeout <= TimeSpan.Zero)
+                return Array.Empty<Guid>();
+
+            return _sessions.Values
+                .Where(c => nowUtc - c.LastHeartbeatUtc > timeout)
+                .Select(c => c.SessionId)
+                .ToArray();
         }
     }
 }

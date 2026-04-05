@@ -1,4 +1,6 @@
-﻿namespace MuLike.Server.Game.Systems
+﻿using MuLike.Server.Game.Entities;
+
+namespace MuLike.Server.Game.Systems
 {
     public sealed class StatRebuildService
     {
@@ -16,6 +18,16 @@
             int defense = agility / 4;
 
             return (hpMax, manaMax, minDamage, maxDamage, defense);
+        }
+
+        public void RebuildPlayerWithEquipment(PlayerEntity player, int attackBonus, int defenseBonus, int hpBonus)
+        {
+            if (player == null)
+                return;
+
+            // Reset to level base first.
+            player.SetLevel(player.Level);
+            player.ApplyEquipmentBonuses(attackBonus, defenseBonus, hpBonus);
         }
     }
 }

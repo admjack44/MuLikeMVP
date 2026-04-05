@@ -37,8 +37,10 @@ namespace MuLike.Data.DTO
         public string family;
         public string rarity;
         public int level;
+        public int requiredLevel;
         public bool twoHanded;
         public string[] equipSlots;
+        public string[] classRestrictions;
 
         public int minDamage;
         public int maxDamage;
@@ -50,7 +52,11 @@ namespace MuLike.Data.DTO
 
         public bool stackable;
         public int maxStack;
+        public string stackRule;
         public int sellPrice;
+        public int excellentFlags;
+        public bool allowSockets;
+        public int maxSockets;
 
         public string model;
         public string icon;

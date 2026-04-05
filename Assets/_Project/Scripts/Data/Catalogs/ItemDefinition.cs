@@ -46,6 +46,33 @@ namespace MuLike.Data.Catalogs
         Pet
     }
 
+    public enum CharacterClassRestriction
+    {
+        Any,
+        Warrior,
+        Mage,
+        Ranger,
+        Paladin,
+        DarkLord
+    }
+
+    public enum ItemStackRule
+    {
+        None,
+        ByItemId,
+        ByItemAndEnhancement
+    }
+
+    [Flags]
+    public enum ExcellentOptionFlags
+    {
+        None = 0,
+        BonusDamage = 1 << 0,
+        BonusDefense = 1 << 1,
+        BonusHp = 1 << 2,
+        BonusCritChance = 1 << 3
+    }
+
     [Serializable]
     public struct ItemBasicStats
     {
@@ -75,6 +102,38 @@ namespace MuLike.Data.Catalogs
         public bool IsEmpty => Hp == 0 && Mana == 0;
     }
 
+    // Passive stat bonuses granted while the item is equipped (not base weapon/armor values).
+    [Serializable]
+    public struct ItemStatBonuses
+    {
+        public int AttackRate;
+        public int Hp;
+        public int Mana;
+        public int SpellPower;
+        public int MoveSpeed;
+        public int DamageAbsorb;
+        public int DamageBoost;
+        public int PetDamage;
+        public int PetDefense;
+        public bool AutoLoot;
+
+        public bool IsEmpty => AttackRate == 0 && Hp == 0 && Mana == 0 && SpellPower == 0
+            && MoveSpeed == 0 && DamageAbsorb == 0 && DamageBoost == 0
+            && PetDamage == 0 && PetDefense == 0 && !AutoLoot;
+    }
+
+    // Attribute requirements the character must meet to equip the item.
+    [Serializable]
+    public struct ItemStatRequirements
+    {
+        public int Strength;
+        public int Agility;
+        public int Energy;
+        public int Command;
+
+        public bool IsEmpty => Strength == 0 && Agility == 0 && Energy == 0 && Command == 0;
+    }
+
     [Serializable]
     public sealed class ItemDefinition
     {
@@ -86,6 +145,9 @@ namespace MuLike.Data.Catalogs
         public string Family;
         public ItemRarity Rarity;
         public int Level;
+        public int RequiredLevel;
+        public int SellValue;
+        public ItemStackRule StackRule;
 
         public bool Stackable;
         public int MaxStack;
@@ -95,6 +157,12 @@ namespace MuLike.Data.Catalogs
         public ItemBasicStats BasicStats;
         public ItemRestoreEffect Restore;
         public List<ItemEquipSlot> AllowedEquipSlots = new();
+        public List<CharacterClassRestriction> AllowedClasses = new();
+        public ExcellentOptionFlags AllowedExcellentOptions;
+        public int MaxSockets;
+        public bool AllowSockets;
+        public ItemStatBonuses StatBonuses;
+        public ItemStatRequirements StatRequirements;
 
         public bool CanEquipIn(ItemEquipSlot slot)
         {
@@ -120,8 +188,10 @@ namespace MuLike.Data.Catalogs
                 family = Family,
                 rarity = Rarity.ToString(),
                 level = Level,
+                requiredLevel = RequiredLevel,
                 twoHanded = IsTwoHanded,
                 equipSlots = slotNames,
+                classRestrictions = ToClassRestrictionNames(AllowedClasses),
                 minDamage = BasicStats.MinDamage,
                 maxDamage = BasicStats.MaxDamage,
                 attackSpeed = BasicStats.AttackSpeed,
@@ -131,11 +201,36 @@ namespace MuLike.Data.Catalogs
                 moveBonus = BasicStats.MoveBonus,
                 stackable = Stackable,
                 maxStack = MaxStack,
+                stackRule = StackRule.ToString(),
+                sellPrice = SellValue,
+                excellentFlags = (int)AllowedExcellentOptions,
+                allowSockets = AllowSockets,
+                maxSockets = MaxSockets,
                 icon = Icon,
                 restore = new ItemRestoreDto
                 {
                     hp = Restore.Hp,
                     mana = Restore.Mana
+                },
+                bonuses = StatBonuses.IsEmpty ? null : new ItemBonusesDto
+                {
+                    attackRate = StatBonuses.AttackRate,
+                    hp = StatBonuses.Hp,
+                    mana = StatBonuses.Mana,
+                    spellPower = StatBonuses.SpellPower,
+                    moveSpeed = StatBonuses.MoveSpeed,
+                    damageAbsorb = StatBonuses.DamageAbsorb,
+                    damageBoost = StatBonuses.DamageBoost,
+                    petDamage = StatBonuses.PetDamage,
+                    petDefense = StatBonuses.PetDefense,
+                    autoLoot = StatBonuses.AutoLoot
+                },
+                requirements = StatRequirements.IsEmpty ? null : new ItemRequirementsDto
+                {
+                    strength = StatRequirements.Strength,
+                    agility = StatRequirements.Agility,
+                    energy = StatRequirements.Energy,
+                    command = StatRequirements.Command
                 }
             };
         }
@@ -152,10 +247,36 @@ namespace MuLike.Data.Catalogs
                 Family = dto.family,
                 Rarity = ParseRarity(dto.rarity),
                 Level = dto.level,
+                RequiredLevel = dto.requiredLevel,
                 Stackable = dto.stackable,
                 MaxStack = dto.maxStack,
+                StackRule = ParseStackRule(dto.stackRule, dto.stackable),
                 IsTwoHanded = dto.twoHanded,
                 Icon = dto.icon,
+                SellValue = dto.sellPrice,
+                AllowedExcellentOptions = ParseExcellentFlags(dto.excellentFlags),
+                AllowSockets = dto.allowSockets,
+                MaxSockets = dto.maxSockets,
+                StatBonuses = dto.bonuses == null ? default : new ItemStatBonuses
+                {
+                    AttackRate = dto.bonuses.attackRate,
+                    Hp = dto.bonuses.hp,
+                    Mana = dto.bonuses.mana,
+                    SpellPower = dto.bonuses.spellPower,
+                    MoveSpeed = dto.bonuses.moveSpeed,
+                    DamageAbsorb = dto.bonuses.damageAbsorb,
+                    DamageBoost = dto.bonuses.damageBoost,
+                    PetDamage = dto.bonuses.petDamage,
+                    PetDefense = dto.bonuses.petDefense,
+                    AutoLoot = dto.bonuses.autoLoot
+                },
+                StatRequirements = dto.requirements == null ? default : new ItemStatRequirements
+                {
+                    Strength = dto.requirements.strength,
+                    Agility = dto.requirements.agility,
+                    Energy = dto.requirements.energy,
+                    Command = dto.requirements.command
+                },
                 BasicStats = new ItemBasicStats
                 {
                     MinDamage = dto.minDamage,
@@ -174,7 +295,18 @@ namespace MuLike.Data.Catalogs
             };
 
             definition.AllowedEquipSlots = ParseEquipSlots(dto.equipSlots);
+            definition.AllowedClasses = ParseClassRestrictions(dto.classRestrictions);
             return definition;
+        }
+
+        private static string[] ToClassRestrictionNames(List<CharacterClassRestriction> restrictions)
+        {
+            var list = restrictions ?? new List<CharacterClassRestriction>();
+            var names = new string[list.Count];
+            for (int i = 0; i < list.Count; i++)
+                names[i] = list[i].ToString();
+
+            return names;
         }
 
         private static ItemCategory ParseCategory(string rawCategory, string fallbackType)
@@ -221,6 +353,43 @@ namespace MuLike.Data.Catalogs
             }
 
             return parsedSlots;
+        }
+
+        private static List<CharacterClassRestriction> ParseClassRestrictions(string[] rawClasses)
+        {
+            var parsed = new List<CharacterClassRestriction>();
+            if (rawClasses == null || rawClasses.Length == 0)
+            {
+                parsed.Add(CharacterClassRestriction.Any);
+                return parsed;
+            }
+
+            for (int i = 0; i < rawClasses.Length; i++)
+            {
+                if (Enum.TryParse(rawClasses[i], true, out CharacterClassRestriction parsedClass))
+                    parsed.Add(parsedClass);
+            }
+
+            if (parsed.Count == 0)
+                parsed.Add(CharacterClassRestriction.Any);
+
+            return parsed;
+        }
+
+        private static ItemStackRule ParseStackRule(string rawRule, bool stackable)
+        {
+            if (Enum.TryParse(rawRule, true, out ItemStackRule parsedRule))
+                return parsedRule;
+
+            return stackable ? ItemStackRule.ByItemId : ItemStackRule.None;
+        }
+
+        private static ExcellentOptionFlags ParseExcellentFlags(int rawFlags)
+        {
+            if (rawFlags < 0)
+                return ExcellentOptionFlags.None;
+
+            return (ExcellentOptionFlags)rawFlags;
         }
     }
 

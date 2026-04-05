@@ -12,11 +12,11 @@ namespace MuLike.Networking
         private readonly int _port;
         private readonly NetworkClient _client;
 
-        public TcpGameConnection(string host, int port)
+        public TcpGameConnection(string host, int port, NetworkClient.Options options = null)
         {
             _host = host;
             _port = port;
-            _client = new NetworkClient();
+            _client = new NetworkClient(options);
 
             _client.OnConnected += () => Connected?.Invoke();
             _client.OnDisconnected += () => Disconnected?.Invoke();

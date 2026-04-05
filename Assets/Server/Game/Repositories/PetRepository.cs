@@ -15,5 +15,10 @@ namespace MuLike.Server.Game.Repositories
         {
             return _activePetByCharacter.TryGetValue(characterId, out petId);
         }
+
+        public void ClearActivePet(int characterId)
+        {
+            _activePetByCharacter.Remove(characterId);
+        }
     }
 }

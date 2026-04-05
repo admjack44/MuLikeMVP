@@ -15,6 +15,9 @@ namespace MuLike.Data.Catalogs
         public string family;
         public ItemRarity rarity;
         public int level;
+        public int requiredLevel;
+        public int sellValue;
+        public ItemStackRule stackRule;
 
         public bool stackable;
         public int maxStack;
@@ -23,6 +26,12 @@ namespace MuLike.Data.Catalogs
         public string icon;
         public ItemBasicStats basicStats;
         public ItemEquipSlot[] allowedEquipSlots;
+        public CharacterClassRestriction[] allowedClasses;
+        public ExcellentOptionFlags allowedExcellentOptions;
+        public bool allowSockets;
+        public int maxSockets;
+        public ItemStatBonuses statBonuses;
+        public ItemStatRequirements statRequirements;
 
         public ItemDefinition ToDefinition()
         {
@@ -36,12 +45,21 @@ namespace MuLike.Data.Catalogs
                 Family = family,
                 Rarity = rarity,
                 Level = level,
+                RequiredLevel = requiredLevel,
+                SellValue = sellValue,
+                StackRule = stackRule,
                 Stackable = stackable,
                 MaxStack = maxStack,
                 IsTwoHanded = twoHanded,
                 Icon = icon,
                 BasicStats = basicStats,
-                AllowedEquipSlots = allowedEquipSlots != null ? new List<ItemEquipSlot>(allowedEquipSlots) : new List<ItemEquipSlot>()
+                AllowedEquipSlots = allowedEquipSlots != null ? new List<ItemEquipSlot>(allowedEquipSlots) : new List<ItemEquipSlot>(),
+                AllowedClasses = allowedClasses != null ? new List<CharacterClassRestriction>(allowedClasses) : new List<CharacterClassRestriction> { CharacterClassRestriction.Any },
+                AllowedExcellentOptions = allowedExcellentOptions,
+                AllowSockets = allowSockets,
+                MaxSockets = maxSockets,
+                StatBonuses = statBonuses,
+                StatRequirements = statRequirements
             };
         }
     }

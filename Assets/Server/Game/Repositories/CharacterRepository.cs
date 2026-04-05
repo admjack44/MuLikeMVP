@@ -16,5 +16,10 @@ namespace MuLike.Server.Game.Repositories
         {
             return _cache.TryGetValue(characterId, out entity);
         }
+
+        public bool Remove(int characterId)
+        {
+            return _cache.Remove(characterId);
+        }
     }
 }

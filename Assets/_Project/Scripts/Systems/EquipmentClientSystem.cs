@@ -555,25 +555,24 @@ namespace MuLike.Systems
         {
             var rules = new Dictionary<EquipSlot, SlotRule>
             {
-                [EquipSlot.Helm] = Rule(EquipItemCategory.Armor, type: "armor", family: "helms"),
-                [EquipSlot.Armor] = Rule(EquipItemCategory.Armor, type: "armor", family: "armors"),
-                [EquipSlot.Pants] = Rule(EquipItemCategory.Armor, type: "armor", family: "pants"),
-                [EquipSlot.Gloves] = Rule(EquipItemCategory.Armor, type: "armor", family: "gloves"),
-                [EquipSlot.Boots] = Rule(EquipItemCategory.Armor, type: "armor", family: "boots"),
+                [EquipSlot.Helm] = Rule(new[] { EquipItemCategory.Armor }, new[] { "armor" }, new[] { "helms" }),
+                [EquipSlot.Armor] = Rule(new[] { EquipItemCategory.Armor }, new[] { "armor" }, new[] { "armors" }),
+                [EquipSlot.Pants] = Rule(new[] { EquipItemCategory.Armor }, new[] { "armor" }, new[] { "pants" }),
+                [EquipSlot.Gloves] = Rule(new[] { EquipItemCategory.Armor }, new[] { "armor" }, new[] { "gloves" }),
+                [EquipSlot.Boots] = Rule(new[] { EquipItemCategory.Armor }, new[] { "armor" }, new[] { "boots" }),
                 [EquipSlot.WeaponMain] = Rule(
-                    EquipItemCategory.Weapon,
-                    type: "weapon",
-                    family: "swords", "axes", "maces", "spears", "bows", "crossbows", "staffs", "scepters"),
+                    new[] { EquipItemCategory.Weapon },
+                    new[] { "weapon" },
+                    new[] { "swords", "axes", "maces", "spears", "bows", "crossbows", "staffs", "scepters" }),
                 [EquipSlot.WeaponOffhand] = Rule(
-                    EquipItemCategory.Shield,
-                    EquipItemCategory.Weapon,
-                    type: "shield", "weapon",
-                    family: "shields", "swords", "axes", "maces"),
-                [EquipSlot.RingLeft] = Rule(EquipItemCategory.Accessory, type: "accessory", family: "rings"),
-                [EquipSlot.RingRight] = Rule(EquipItemCategory.Accessory, type: "accessory", family: "rings"),
-                [EquipSlot.Pendant] = Rule(EquipItemCategory.Accessory, type: "accessory", family: "pendants"),
-                [EquipSlot.Wings] = Rule(EquipItemCategory.Wings, type: "special", family: "wings"),
-                [EquipSlot.Pet] = Rule(EquipItemCategory.Pet, type: "special", family: "pets")
+                    new[] { EquipItemCategory.Shield, EquipItemCategory.Weapon },
+                    new[] { "shield", "weapon" },
+                    new[] { "shields", "swords", "axes", "maces" }),
+                [EquipSlot.RingLeft] = Rule(new[] { EquipItemCategory.Accessory }, new[] { "accessory" }, new[] { "rings" }),
+                [EquipSlot.RingRight] = Rule(new[] { EquipItemCategory.Accessory }, new[] { "accessory" }, new[] { "rings" }),
+                [EquipSlot.Pendant] = Rule(new[] { EquipItemCategory.Accessory }, new[] { "accessory" }, new[] { "pendants" }),
+                [EquipSlot.Wings] = Rule(new[] { EquipItemCategory.Wings }, new[] { "special" }, new[] { "wings" }),
+                [EquipSlot.Pet] = Rule(new[] { EquipItemCategory.Pet }, new[] { "special" }, new[] { "pets" })
             };
 
             return rules;

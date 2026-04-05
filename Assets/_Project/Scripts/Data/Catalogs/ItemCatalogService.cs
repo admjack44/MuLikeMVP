@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using MuLike.Data.DTO;
+using MuLike.Shared.Items;
 using UnityEngine;
 
 namespace MuLike.Data.Catalogs
@@ -167,6 +168,14 @@ namespace MuLike.Data.Catalogs
                 return false;
             }
 
+            if (!ItemCatalogSyncPolicy.IsInKnownRange(item.ItemId))
+            {
+                issues.Add(new ItemCatalogValidationIssue(
+                    ItemCatalogValidationSeverity.Warning,
+                    item.ItemId,
+                    "ItemId is outside declared sync ranges."));
+            }
+
             if (string.IsNullOrWhiteSpace(item.Name))
             {
                 issues.Add(new ItemCatalogValidationIssue(
@@ -182,6 +191,24 @@ namespace MuLike.Data.Catalogs
                     ItemCatalogValidationSeverity.Error,
                     item.ItemId,
                     "MaxStack cannot be negative."));
+                return false;
+            }
+
+            if (item.RequiredLevel < 0)
+            {
+                issues.Add(new ItemCatalogValidationIssue(
+                    ItemCatalogValidationSeverity.Error,
+                    item.ItemId,
+                    "RequiredLevel cannot be negative."));
+                return false;
+            }
+
+            if (item.SellValue < 0)
+            {
+                issues.Add(new ItemCatalogValidationIssue(
+                    ItemCatalogValidationSeverity.Error,
+                    item.ItemId,
+                    "SellValue cannot be negative."));
                 return false;
             }
 
@@ -217,8 +244,32 @@ namespace MuLike.Data.Catalogs
                 item.MaxStack = 2;
             }
 
+            if (!item.Stackable)
+            {
+                item.StackRule = ItemStackRule.None;
+            }
+            else if (item.StackRule == ItemStackRule.None)
+            {
+                item.StackRule = ItemStackRule.ByItemId;
+            }
+
+            if (!item.AllowSockets)
+            {
+                item.MaxSockets = 0;
+            }
+            else if (item.MaxSockets < 1)
+            {
+                item.MaxSockets = 1;
+            }
+
+            if (item.MaxSockets > 5)
+                item.MaxSockets = 5;
+
             if (item.AllowedEquipSlots == null)
                 item.AllowedEquipSlots = new List<ItemEquipSlot>();
+
+            if (item.AllowedClasses == null || item.AllowedClasses.Count == 0)
+                item.AllowedClasses = new List<CharacterClassRestriction> { CharacterClassRestriction.Any };
 
             if (item.Category == ItemCategory.Weapon
                 || item.Category == ItemCategory.Shield
